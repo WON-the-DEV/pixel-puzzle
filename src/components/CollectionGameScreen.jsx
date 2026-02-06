@@ -309,8 +309,9 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       clueWidth = Math.min(56, maxRowClueLen * 12 + 10);
       clueHeight = Math.min(56, maxColClueLen * 12 + 8);
     } else {
-      clueWidth = Math.min(62, maxRowClueLen * 11 + 8);
-      clueHeight = Math.min(62, maxColClueLen * 11 + 8);
+      const perNum = Math.max(8, Math.min(11, Math.floor(maxWidth / (size + maxRowClueLen * 2))));
+      clueWidth = Math.min(72, maxRowClueLen * perNum + 6);
+      clueHeight = Math.min(68, maxColClueLen * 10 + 6);
     }
 
     const padding = 4;
@@ -398,7 +399,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     if (size <= 5) clueFontSize = 12;
     else if (size <= 8) clueFontSize = 11;
     else if (size <= 10) clueFontSize = 10;
-    else clueFontSize = 9;
+    else clueFontSize = Math.max(8, Math.min(9, cellSize * 0.45));
     const fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
     const clueFont = `bold ${clueFontSize}px ${fontFamily}`;
 
@@ -413,11 +414,12 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
         ctx.globalAlpha = 1.0;
         ctx.fillStyle = i === hRow ? C.highlight : C.clueText;
       }
-      ctx.fillText(clues.join(' '), padding + clueWidth / 2, y);
+      const separator = size >= 15 ? '\u2009' : ' ';
+      ctx.fillText(clues.join(separator), padding + clueWidth / 2, y);
       ctx.globalAlpha = 1.0;
     });
 
-    const colClueLineHeight = Math.min(15, cellSize * 0.65);
+    const colClueLineHeight = size >= 15 ? Math.min(12, cellSize * 0.55) : Math.min(15, cellSize * 0.65);
     puzzle.colClues.forEach((clues, j) => {
       const complete = isColComplete(puzzle.solution, playerGrid, j);
       const x = offsetX + j * cellSize + cellSize / 2;
@@ -720,36 +722,38 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const tileNumber = tileRow * collection.tileCols + tileCol + 1;
 
   return (
-    <div className="game-screen">
-      <header className="game-header">
+    <div className={`game-screen ${controllerMode ? 'controller-active' : ''}`}>
+      <header className={`game-header ${controllerMode ? 'game-header--compact' : ''}`}>
         <button className="back-btn" onClick={onGoHome} aria-label="뒤로">
-          <BackIcon size={24} />
+          <BackIcon size={controllerMode ? 20 : 24} />
         </button>
         <div className="level-info">
           <span className="level-number">
             {collection.emoji} {collection.name}
             <span className="puzzle-name"> · #{tileNumber}</span>
           </span>
-          <span className="level-size">{state.puzzle.size}×{state.puzzle.size}</span>
+          {!controllerMode && <span className="level-size">{state.puzzle.size}×{state.puzzle.size}</span>}
         </div>
         <div className="header-right">
           <div className="lives-display">
             {Array.from({ length: state.maxLives }, (_, i) => (
               <span key={i} className={`life-heart ${i < state.lives ? 'active' : 'lost'}`}>
-                <HeartIcon size={16} filled={i < state.lives} color={i < state.lives ? 'var(--danger)' : 'var(--text-tertiary)'} />
+                <HeartIcon size={controllerMode ? 14 : 16} filled={i < state.lives} color={i < state.lives ? 'var(--danger)' : 'var(--text-tertiary)'} />
               </span>
             ))}
           </div>
-          <div className="timer">{displayTime}</div>
+          {!controllerMode && <div className="timer">{displayTime}</div>}
         </div>
       </header>
 
-      <div className="progress-bar-container">
-        <div className="progress-bar">
-          <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+      {!controllerMode && (
+        <div className="progress-bar-container">
+          <div className="progress-bar">
+            <div className="progress-fill" style={{ width: `${progressPercent}%` }} />
+          </div>
+          <span className="progress-text">{state.filledCorrect}/{state.puzzle.totalFilled}</span>
         </div>
-        <span className="progress-text">{state.filledCorrect}/{state.puzzle.totalFilled}</span>
-      </div>
+      )}
 
       <main className="game-container">
         <MonoCanvas
@@ -890,14 +894,15 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
             <h2>게임 오버</h2>
             <p className="game-over-desc">라이프를 모두 소진했어요</p>
             {!state.usedRevive && (
-              <button className="revive-btn" onClick={() => { alert('광고 시청 완료! ❤️ 부활!'); handleRevive(); }}>
-                <VideoIcon size={20} color="white" />
+              <button className="revive-btn revive-btn--prominent" onClick={() => { alert('광고 시청 완료! ❤️ 부활!'); handleRevive(); }}>
+                <span style={{ fontSize: 20 }}>📺</span>
                 <span>광고 보고 계속하기</span>
+                <span className="revive-badge">❤️ +1</span>
               </button>
             )}
             <div className="modal-buttons">
               <button className="secondary-btn" onClick={onGoHome}>홈으로</button>
-              <button className="primary-btn" onClick={handleRestart}>다시 시작</button>
+              <button className="secondary-btn" onClick={handleRestart}>다시 시작</button>
             </div>
           </div>
         </div>

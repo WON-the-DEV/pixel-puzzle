@@ -2,6 +2,8 @@ import { useState, useCallback, useEffect } from 'react';
 import { loadSettings, saveSettings } from '../lib/settings.js';
 import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashIcon, AlertIcon, CheckIcon } from './icons/Icons.jsx';
 
+const DEV_MODE = import.meta.env.DEV;
+
 export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll }) {
   const [settings, setSettings] = useState(loadSettings);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
@@ -126,18 +128,20 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll 
             <span>튜토리얼 다시 보기</span>
           </button>
 
-          <button
-            className="settings-action-btn"
-            onClick={() => {
-              if (onUnlockAll) onUnlockAll();
-            }}
-            style={{ color: 'var(--accent)' }}
-          >
-            <span className="settings-item-icon">
-              <CheckIcon size={20} color="var(--accent)" />
-            </span>
-            <span>🔓 모든 퍼즐 해금 (테스트용)</span>
-          </button>
+          {DEV_MODE && (
+            <button
+              className="settings-action-btn"
+              onClick={() => {
+                if (onUnlockAll) onUnlockAll();
+              }}
+              style={{ color: 'var(--accent)' }}
+            >
+              <span className="settings-item-icon">
+                <CheckIcon size={20} color="var(--accent)" />
+              </span>
+              <span>🔓 모든 퍼즐 해금 (테스트용)</span>
+            </button>
+          )}
 
           <button
             className="settings-action-btn danger"

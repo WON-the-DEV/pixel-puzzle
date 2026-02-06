@@ -105,8 +105,10 @@ export default function GameCanvas({
       clueWidth = Math.min(56, maxRowClueLen * 12 + 10);
       clueHeight = Math.min(56, maxColClueLen * 12 + 8);
     } else {
-      clueWidth = Math.min(62, maxRowClueLen * 11 + 8);
-      clueHeight = Math.min(62, maxColClueLen * 11 + 8);
+      // 15x15: dynamic clue width based on actual max clue length
+      const perNum = Math.max(8, Math.min(11, Math.floor(maxWidth / (size + maxRowClueLen * 2))));
+      clueWidth = Math.min(72, maxRowClueLen * perNum + 6);
+      clueHeight = Math.min(68, maxColClueLen * 10 + 6);
     }
 
     const padding = 4;
@@ -194,7 +196,7 @@ export default function GameCanvas({
     if (size <= 5) clueFontSize = 12;
     else if (size <= 8) clueFontSize = 11;
     else if (size <= 10) clueFontSize = 10;
-    else clueFontSize = 9;
+    else clueFontSize = Math.max(8, Math.min(9, cellSize * 0.45));
     const fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
     const clueFont = `bold ${clueFontSize}px ${fontFamily}`;
 
@@ -210,12 +212,14 @@ export default function GameCanvas({
         ctx.globalAlpha = 1.0;
         ctx.fillStyle = i === hRow ? COLORS.highlight : COLORS.clueText;
       }
-      ctx.fillText(clues.join(' '), padding + clueWidth / 2, y);
+      // For 15x15, use narrower spacing between numbers
+      const separator = size >= 15 ? '\u2009' : ' '; // thin space for 15x15
+      ctx.fillText(clues.join(separator), padding + clueWidth / 2, y);
       ctx.globalAlpha = 1.0;
     });
 
     // Col clues (top)
-    const colClueLineHeight = Math.min(15, cellSize * 0.65);
+    const colClueLineHeight = size >= 15 ? Math.min(12, cellSize * 0.55) : Math.min(15, cellSize * 0.65);
     puzzle.colClues.forEach((clues, j) => {
       const complete = isColComplete(puzzle.colClues, playerGrid, j);
       const x = offsetX + j * cellSize + cellSize / 2;

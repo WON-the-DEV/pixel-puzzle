@@ -203,41 +203,43 @@ export default function GameScreen({
   const stars = isComplete ? calculateStars(level, elapsedTime) : 0;
 
   return (
-    <div className="game-screen">
+    <div className={`game-screen ${controllerMode ? 'controller-active' : ''}`}>
       {/* Header */}
-      <header className="game-header">
+      <header className={`game-header ${controllerMode ? 'game-header--compact' : ''}`}>
         <button className="back-btn" onClick={onGoHome} aria-label="뒤로">
-          <BackIcon size={24} />
+          <BackIcon size={controllerMode ? 20 : 24} />
         </button>
         <div className="level-info">
           <span className="level-number">
             Level {level}
             {puzzle.name && <span className="puzzle-name"> · {puzzle.name}</span>}
           </span>
-          <span className="level-size">{puzzle.size}×{puzzle.size}</span>
+          {!controllerMode && <span className="level-size">{puzzle.size}×{puzzle.size}</span>}
         </div>
         <div className="header-right">
           <div className="lives-display">
             {Array.from({ length: maxLives }, (_, i) => (
               <span key={i} className={`life-heart ${i < lives ? 'active' : 'lost'}`}>
-                <HeartIcon size={16} filled={i < lives} color={i < lives ? 'var(--danger)' : 'var(--text-tertiary)'} />
+                <HeartIcon size={controllerMode ? 14 : 16} filled={i < lives} color={i < lives ? 'var(--danger)' : 'var(--text-tertiary)'} />
               </span>
             ))}
           </div>
-          <div className="timer">{displayTime}</div>
+          {!controllerMode && <div className="timer">{displayTime}</div>}
         </div>
       </header>
 
-      {/* Progress bar */}
-      <div className="progress-bar-container">
-        <div className="progress-bar">
-          <div
-            className="progress-fill"
-            style={{ width: `${progressPercent}%` }}
-          />
+      {/* Progress bar — hidden in controller mode */}
+      {!controllerMode && (
+        <div className="progress-bar-container">
+          <div className="progress-bar">
+            <div
+              className="progress-fill"
+              style={{ width: `${progressPercent}%` }}
+            />
+          </div>
+          <span className="progress-text">{filledCorrect}/{puzzle.totalFilled}</span>
         </div>
-        <span className="progress-text">{filledCorrect}/{puzzle.totalFilled}</span>
-      </div>
+      )}
 
       {/* Canvas */}
       <main className="game-container">

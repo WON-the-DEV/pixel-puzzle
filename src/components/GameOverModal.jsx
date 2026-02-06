@@ -23,16 +23,17 @@ export default function GameOverModal({ level, onRestart, onHome, onRevive, used
           </div>
         </div>
         {!usedRevive && onRevive && (
-          <button className="revive-btn" onClick={handleRevive}>
-            <VideoIcon size={20} color="white" />
+          <button className="revive-btn revive-btn--prominent" onClick={handleRevive}>
+            <span style={{ fontSize: 20 }}>📺</span>
             <span>광고 보고 계속하기</span>
+            <span className="revive-badge">❤️ +1</span>
           </button>
         )}
         <div className="modal-buttons">
           <button className="secondary-btn" onClick={onHome}>
             홈으로
           </button>
-          <button className="primary-btn" onClick={onRestart}>
+          <button className="secondary-btn" onClick={onRestart}>
             다시 시작
           </button>
         </div>

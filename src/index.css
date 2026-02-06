@@ -1152,7 +1152,7 @@ body {
   width: 100%;
   padding: 14px 20px;
   margin-bottom: 10px;
-  background: linear-gradient(135deg, #10B981, #059669);
+  background: linear-gradient(135deg, #22c55e, #16a34a);
   color: white;
   border: none;
   border-radius: var(--radius-lg);
@@ -1160,8 +1160,26 @@ body {
   font-weight: 700;
   cursor: pointer;
   transition: all 0.2s;
-  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
-  min-height: 48px;
+  box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35);
+  min-height: 52px;
+  position: relative;
+}
+
+.revive-btn--prominent {
+  animation: revivePulse 2s ease-in-out infinite;
+}
+
+.revive-badge {
+  background: rgba(255, 255, 255, 0.25);
+  padding: 2px 8px;
+  border-radius: 10px;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+@keyframes revivePulse {
+  0%, 100% { box-shadow: 0 4px 16px rgba(34, 197, 94, 0.35); }
+  50% { box-shadow: 0 4px 24px rgba(34, 197, 94, 0.55); }
 }
 
 .revive-btn:active {
@@ -2024,6 +2042,27 @@ body {
 /* ═══════════════════════════════════════
    Controller Pad
    ═══════════════════════════════════════ */
+
+/* Controller mode: compact header to maximize canvas */
+.game-header--compact {
+  padding: 2px 8px !important;
+}
+.game-header--compact .back-btn {
+  width: 28px;
+  height: 28px;
+}
+.game-header--compact .level-number {
+  font-size: 13px;
+}
+.game-header--compact .life-heart svg {
+  width: 14px;
+  height: 14px;
+}
+
+/* Controller mode: game-container gets more space */
+.controller-active .game-container {
+  padding: 2px 2px;
+}
 
 .controller-controls {
   padding: 2px 6px calc(4px + var(--safe-bottom));
