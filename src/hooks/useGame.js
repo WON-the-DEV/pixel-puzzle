@@ -53,6 +53,74 @@ function processAutoFill(state, grid) {
 
 function gameReducer(state, action) {
   switch (action.type) {
+    case 'START_DAILY': {
+      const puzzle = action.puzzle;
+      const playerGrid = createEmptyGrid(puzzle.size);
+
+      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
+      for (let i = 0; i < puzzle.size; i++) {
+        if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
+          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
+        }
+      }
+      for (let j = 0; j < puzzle.size; j++) {
+        if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
+          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
+        }
+      }
+
+      // 저장된 일일 게임 복원 시도
+      const dailySaveKey = 'nonogram_daily_game_' + (action.dateStr || '');
+      let savedDaily = null;
+      try {
+        const raw = localStorage.getItem(dailySaveKey);
+        if (raw) savedDaily = JSON.parse(raw);
+      } catch { /* ignore */ }
+
+      if (savedDaily && savedDaily.playerGrid) {
+        const filledCorrect = getFilledCorrectCount(puzzle.solution, savedDaily.playerGrid);
+        return {
+          ...state,
+          level: 0,
+          puzzle,
+          playerGrid: savedDaily.playerGrid,
+          mode: savedDaily.mode || 'fill',
+          history: [cloneGrid(savedDaily.playerGrid)],
+          historyIndex: 0,
+          startTime: Date.now() - (savedDaily.elapsedTime || 0),
+          elapsedTime: savedDaily.elapsedTime || 0,
+          isComplete: false,
+          lives: savedDaily.lives != null ? savedDaily.lives : 3,
+          maxLives: 3,
+          isGameOver: savedDaily.lives != null && savedDaily.lives <= 0,
+          autoXCells: [],
+          filledCorrect,
+          mistakeFlashCells: [],
+          usedRevive: savedDaily.usedRevive || false,
+        };
+      }
+
+      return {
+        ...state,
+        level: 0,
+        puzzle,
+        playerGrid,
+        mode: 'fill',
+        history: [cloneGrid(playerGrid)],
+        historyIndex: 0,
+        startTime: Date.now(),
+        elapsedTime: 0,
+        isComplete: false,
+        lives: 3,
+        maxLives: 3,
+        isGameOver: false,
+        autoXCells: [],
+        filledCorrect: 0,
+        mistakeFlashCells: [],
+        usedRevive: false,
+      };
+    }
+
     case 'START_LEVEL': {
       const level = action.level;
       const puzzle = createPuzzleForLevel(level);
@@ -382,6 +450,10 @@ export function useGame() {
     dispatch({ type: 'START_LEVEL', level });
   }, []);
 
+  const startDaily = useCallback((puzzle, dateStr) => {
+    dispatch({ type: 'START_DAILY', puzzle, dateStr });
+  }, []);
+
   const toggleCell = useCallback((row, col) => {
     dispatch({ type: 'TOGGLE_CELL', row, col });
   }, []);
@@ -417,6 +489,7 @@ export function useGame() {
   return {
     state,
     startLevel,
+    startDaily,
     toggleCell,
     fillCell,
     endDrag,

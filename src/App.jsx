@@ -9,6 +9,7 @@ import { loadAppState, saveAppState, loadCollectionProgress, saveCollectionProgr
 import { initAudio } from './lib/sound.js';
 import { calculateStars, TOTAL_LEVELS } from './lib/puzzle.js';
 import { loadSettings } from './lib/settings.js';
+import { getDailyPuzzle, getTodayStr, loadDailyState, saveDailyState } from './lib/dailyChallenge.js';
 
 function hasSeenTutorial() {
   try {
@@ -35,7 +36,8 @@ export default function App() {
   const [homeScrollY, setHomeScrollY] = useState(0);
   const [darkMode, setDarkMode] = useState(() => loadSettings().darkMode);
   const [levelTransition, setLevelTransition] = useState(null); // 'slide-left-in' | null
-  const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive } = useGame();
+  const [dailyDate, setDailyDate] = useState(null); // YYYY-MM-DD when playing daily
+  const { state: gameState, startLevel, startDaily, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive } = useGame();
 
   // Apply dark mode on initial load
   useEffect(() => {
@@ -86,6 +88,16 @@ export default function App() {
   // Handle level completion — update state + award hint
   useEffect(() => {
     if (gameState.isComplete && gameState.puzzle) {
+      // 일일 챌린지 완료 처리
+      if (dailyDate) {
+        saveDailyState(dailyDate, {
+          completed: true,
+          elapsedTime: gameState.elapsedTime,
+          completedAt: Date.now(),
+        });
+        return;
+      }
+
       setAppState((prev) => {
         const completedLevels = prev.completedLevels.includes(gameState.level)
           ? prev.completedLevels
@@ -110,14 +122,29 @@ export default function App() {
         return { ...prev, completedLevels, currentLevel, bestTimes, bestStars, hints };
       });
     }
-  }, [gameState.isComplete, gameState.level, gameState.elapsedTime, gameState.puzzle]);
+  }, [gameState.isComplete, gameState.level, gameState.elapsedTime, gameState.puzzle, dailyDate]);
 
   const handleStartLevel = useCallback(
     (level) => {
       startLevel(level);
+      setDailyDate(null);
       setScreen('game');
     },
     [startLevel]
+  );
+
+  const handleStartDaily = useCallback(
+    (dateStr) => {
+      // 이미 완료된 퍼즐이면 무시
+      const existingState = loadDailyState(dateStr);
+      if (existingState && existingState.completed) return;
+
+      const puzzle = getDailyPuzzle(dateStr);
+      startDaily(puzzle, dateStr);
+      setDailyDate(dateStr);
+      setScreen('game');
+    },
+    [startDaily]
   );
 
   const handleTutorialComplete = useCallback(() => {
@@ -128,6 +155,7 @@ export default function App() {
   const handleGoHome = useCallback(() => {
     setScreen('home');
     setActiveCollectionGame(null);
+    setDailyDate(null);
     // 탭 유지: 컬렉션 게임에서 돌아올 때 컬렉션 탭 유지 (homeTab은 변경 안 함)
   }, []);
 
@@ -216,6 +244,35 @@ export default function App() {
     }));
   }, []);
 
+  // Auto-save daily game progress
+  useEffect(() => {
+    if (!dailyDate || !gameState.puzzle || gameState.isComplete || gameState.isGameOver) return;
+    if (gameState.playerGrid && gameState.playerGrid.length > 0) {
+      const key = 'nonogram_daily_game_' + dailyDate;
+      try {
+        localStorage.setItem(key, JSON.stringify({
+          playerGrid: gameState.playerGrid,
+          mode: gameState.mode,
+          lives: gameState.lives,
+          elapsedTime: gameState.startTime ? Date.now() - gameState.startTime : 0,
+          usedRevive: gameState.usedRevive,
+          filledCorrect: gameState.filledCorrect,
+          totalFilled: gameState.puzzle.totalFilled,
+        }));
+      } catch { /* ignore */ }
+    }
+  }, [dailyDate, gameState.playerGrid, gameState.isComplete, gameState.isGameOver]);
+
+  // Also save daily progress for the DailyChallenge card display
+  useEffect(() => {
+    if (!dailyDate || !gameState.puzzle || gameState.isComplete) return;
+    saveDailyState(dailyDate, {
+      completed: false,
+      filledCorrect: gameState.filledCorrect || 0,
+      totalFilled: gameState.puzzle.totalFilled || 1,
+    });
+  }, [dailyDate, gameState.filledCorrect, gameState.isComplete]);
+
   // Save on visibility change
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -288,6 +345,8 @@ export default function App() {
           onRevive={revive}
           hints={appState.hints}
           darkMode={darkMode}
+          isDaily={!!dailyDate}
+          dailyDate={dailyDate}
         />
       </div>
     );
@@ -303,6 +362,7 @@ export default function App() {
         onWatchAd={handleWatchAd}
         onBuyHints={handleBuyHints}
         onStartCollectionTile={handleStartCollectionTile}
+        onStartDaily={handleStartDaily}
         activeTab={homeTab}
         onTabChange={setHomeTab}
         savedScrollY={homeScrollY}

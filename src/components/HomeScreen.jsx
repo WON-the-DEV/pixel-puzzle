@@ -1,6 +1,7 @@
 import { useMemo, useState, useCallback, useEffect, useRef, memo } from 'react';
 import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel, TOTAL_LEVELS } from '../lib/puzzle.js';
 import CollectionView from './CollectionView.jsx';
+import DailyChallenge from './DailyChallenge.jsx';
 import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, SettingsIcon, GridIcon, VideoIcon, DiamondIcon, DifficultyBadge } from './icons/Icons.jsx';
 
 // Hint modal component
@@ -112,7 +113,7 @@ const MiniPuzzleArt = memo(function MiniPuzzleArt({ level, sectionColor }) {
   );
 });
 
-export default function HomeScreen({ appState, collectionProgress, onStartLevel, onOpenSettings, onWatchAd, onBuyHints, onStartCollectionTile, activeTab: externalTab, onTabChange, savedScrollY, onScrollChange }) {
+export default function HomeScreen({ appState, collectionProgress, onStartLevel, onOpenSettings, onWatchAd, onBuyHints, onStartCollectionTile, onStartDaily, activeTab: externalTab, onTabChange, savedScrollY, onScrollChange }) {
   const { completedLevels = [], currentLevel = 1, bestTimes = {}, bestStars = {}, hints = 3 } = appState;
   const completedSet = useMemo(() => new Set(completedLevels), [completedLevels]);
   const activeTab = externalTab || 'puzzle';
@@ -215,6 +216,9 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
                 <span>{hints}</span>
               </button>
             </div>
+
+            {/* Daily Challenge */}
+            <DailyChallenge onStartDaily={onStartDaily} />
 
             {/* Level sections — accordion */}
             {SECTIONS.map((section) => {

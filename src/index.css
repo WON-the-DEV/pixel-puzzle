@@ -2431,3 +2431,161 @@ body {
   max-height: 1000px;
   opacity: 1;
 }
+
+/* ═══════════════════════════════════════
+   일일 챌린지 카드
+   ═══════════════════════════════════════ */
+.daily-challenge-card {
+  background: var(--surface);
+  border-radius: 16px;
+  padding: 16px;
+  margin: 8px 0 12px;
+  border: 1.5px solid var(--border);
+  cursor: pointer;
+  transition: transform 0.15s ease, box-shadow 0.15s ease;
+}
+
+.daily-challenge-card:active {
+  transform: scale(0.98);
+}
+
+.daily-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 8px;
+}
+
+.daily-title-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.daily-title {
+  font-size: 15px;
+  font-weight: 700;
+  color: var(--text);
+}
+
+.daily-badge {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--success);
+  background: var(--success-light);
+  padding: 2px 8px;
+  border-radius: 10px;
+}
+
+.daily-streak {
+  display: flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 13px;
+  font-weight: 600;
+  color: #f97316;
+}
+
+.daily-progress {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+}
+
+.daily-progress-bar {
+  flex: 1;
+  height: 6px;
+  background: var(--border);
+  border-radius: 3px;
+  overflow: hidden;
+}
+
+.daily-progress-fill {
+  height: 100%;
+  background: linear-gradient(90deg, var(--accent), #a855f7);
+  border-radius: 3px;
+  transition: width 0.3s ease;
+}
+
+.daily-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  min-width: 32px;
+  text-align: right;
+}
+
+.daily-cta {
+  font-size: 13px;
+  color: var(--text-secondary);
+  margin-bottom: 10px;
+}
+
+/* 캘린더 뷰 */
+.daily-calendar {
+  display: flex;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.daily-cal-day {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+  flex: 1;
+}
+
+.daily-cal-name {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  font-weight: 500;
+}
+
+.daily-cal-circle {
+  width: 32px;
+  height: 32px;
+  border-radius: 50%;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--border-light);
+  transition: all 0.2s ease;
+}
+
+.daily-cal-circle.current {
+  border: 2px solid var(--accent);
+  background: var(--accent-light);
+}
+
+.daily-cal-circle.done {
+  background: var(--accent);
+}
+
+.daily-cal-num {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.daily-cal-day.today .daily-cal-name {
+  color: var(--accent);
+  font-weight: 700;
+}
+
+.daily-cal-day.completed .daily-cal-num {
+  color: white;
+}
+
+/* 일일 챌린지 게임 헤더 */
+.daily-game-title {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.daily-game-date {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}

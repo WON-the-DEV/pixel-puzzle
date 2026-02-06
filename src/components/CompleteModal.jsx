@@ -51,7 +51,7 @@ function PixelArt({ solution, size }) {
   );
 }
 
-export default function CompleteModal({ level, time, puzzleName, stars = 0, onHome, onNext, puzzle }) {
+export default function CompleteModal({ level, time, puzzleName, stars = 0, onHome, onNext, puzzle, isDaily = false }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <div className="modal-content">
@@ -99,12 +99,20 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
         </p>
 
         <div className="modal-buttons">
-          <button className="secondary-btn" onClick={onHome} aria-label="홈 화면으로 돌아가기">
-            홈으로
-          </button>
-          <button className="primary-btn" onClick={onNext} aria-label="다음 레벨로 진행">
-            다음 레벨 →
-          </button>
+          {isDaily ? (
+            <button className="primary-btn" onClick={onHome} aria-label="홈 화면으로 돌아가기" style={{ width: '100%' }}>
+              🎉 홈으로
+            </button>
+          ) : (
+            <>
+              <button className="secondary-btn" onClick={onHome} aria-label="홈 화면으로 돌아가기">
+                홈으로
+              </button>
+              <button className="primary-btn" onClick={onNext} aria-label="다음 레벨로 진행">
+                다음 레벨 →
+              </button>
+            </>
+          )}
         </div>
       </div>
     </div>

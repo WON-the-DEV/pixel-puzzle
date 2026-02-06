@@ -28,6 +28,8 @@ export default function GameScreen({
   onRevive,
   hints,
   darkMode = false,
+  isDaily = false,
+  dailyDate = null,
 }) {
   const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife, mistakeFlashCells, usedRevive } = gameState;
   const [displayTime, setDisplayTime] = useState('00:00');
@@ -210,11 +212,18 @@ export default function GameScreen({
           <BackIcon size={controllerMode ? 20 : 24} />
         </button>
         <div className="level-info">
-          <span className="level-number">
-            Level {level}
-            {puzzle.name && <span className="puzzle-name"> · {puzzle.name}</span>}
-          </span>
-          {!controllerMode && <span className="level-size">{puzzle.size}×{puzzle.size}</span>}
+          {isDaily ? (
+            <span className="level-number daily-game-title">
+              📅 오늘의 퍼즐
+              {dailyDate && <span className="daily-game-date">{dailyDate}</span>}
+            </span>
+          ) : (
+            <span className="level-number">
+              Level {level}
+              {puzzle.name && <span className="puzzle-name"> · {puzzle.name}</span>}
+            </span>
+          )}
+          {!controllerMode && !isDaily && <span className="level-size">{puzzle.size}×{puzzle.size}</span>}
         </div>
         <div className="header-right">
           <div className="lives-display">
@@ -332,11 +341,12 @@ export default function GameScreen({
         <CompleteModal
           level={level}
           time={elapsedTime}
-          puzzleName={puzzle.name}
+          puzzleName={isDaily ? '오늘의 퍼즐' : puzzle.name}
           stars={stars}
           onHome={onGoHome}
-          onNext={onNextLevel}
+          onNext={isDaily ? null : onNextLevel}
           puzzle={puzzle}
+          isDaily={isDaily}
         />
       )}
 
