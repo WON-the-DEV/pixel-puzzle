@@ -25,3 +25,4 @@ npm-debug.log*
 
 # Workflow (needs workflow scope PAT to push)
 # .github/workflows/
+.github/

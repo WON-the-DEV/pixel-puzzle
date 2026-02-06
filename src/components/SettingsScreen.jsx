@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { loadSettings, saveSettings } from '../lib/settings.js';
-import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashIcon, AlertIcon } from './icons/Icons.jsx';
+import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashIcon, AlertIcon, CheckIcon } from './icons/Icons.jsx';
 
 export default function SettingsScreen({ onGoHome, onResetTutorial }) {
   const [settings, setSettings] = useState(loadSettings);
@@ -137,6 +137,26 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
               <BookIcon size={20} color="var(--text-secondary)" />
             </span>
             <span>튜토리얼 다시 보기</span>
+          </button>
+
+          <button
+            className="settings-action-btn"
+            onClick={() => {
+              try {
+                const state = JSON.parse(localStorage.getItem('nonogram_state') || '{}');
+                const allLevels = Array.from({ length: 50 }, (_, i) => i + 1);
+                state.completedLevels = allLevels;
+                state.currentLevel = 51;
+                localStorage.setItem('nonogram_state', JSON.stringify(state));
+                window.location.reload();
+              } catch { /* ignore */ }
+            }}
+            style={{ color: 'var(--accent)' }}
+          >
+            <span className="settings-item-icon">
+              <CheckIcon size={20} color="var(--accent)" />
+            </span>
+            <span>🔓 모든 퍼즐 해금 (테스트용)</span>
           </button>
 
           <button
