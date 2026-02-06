@@ -266,7 +266,7 @@ body {
   font-weight: 700;
   color: var(--accent);
   transition: all 0.15s;
-  min-height: 32px;
+  min-height: 44px;
 }
 
 .stats-line-hint:active {
@@ -1245,6 +1245,14 @@ body {
   animation: screenFadeIn 0.35s ease both;
 }
 
+.screen-transition.slide-left-in {
+  animation: slideLeftIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.screen-transition.fade-out {
+  animation: screenFadeOut 0.2s ease both;
+}
+
 @keyframes screenFadeIn {
   from {
     opacity: 0;
@@ -1253,6 +1261,28 @@ body {
   to {
     opacity: 1;
     transform: translateY(0);
+  }
+}
+
+@keyframes screenFadeOut {
+  from {
+    opacity: 1;
+    transform: translateX(0);
+  }
+  to {
+    opacity: 0;
+    transform: translateX(-30px);
+  }
+}
+
+@keyframes slideLeftIn {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
   }
 }
 
@@ -1386,87 +1416,199 @@ body {
   white-space: pre-line;
 }
 
-/* Tutorial example grid */
+/* Tutorial example area */
 .tutorial-example {
-  margin-top: 24px;
+  margin-top: 20px;
   display: flex;
   justify-content: center;
 }
 
-.example-grid {
+/* ── Tutorial Mini Grid (new interactive examples) ── */
+.tutorial-mini-grid {
   display: inline-flex;
   flex-direction: column;
-  gap: 3px;
+  align-items: center;
+  gap: 10px;
   background: var(--bg);
-  padding: 16px;
+  padding: 16px 20px;
   border-radius: var(--radius-lg);
   border: 1px solid var(--border-light);
 }
 
-.example-header {
+.mini-grid-row {
   display: flex;
-  gap: 3px;
-  padding-left: 28px;
+  align-items: center;
+  gap: 4px;
 }
 
-.example-clue-col {
+.mini-grid-cross {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.cross-header {
+  display: flex;
+  gap: 4px;
+}
+
+.cross-spacer {
+  width: 24px;
+}
+
+.mini-clue-col {
   width: 32px;
   text-align: center;
   font-size: 13px;
   font-weight: 700;
   color: var(--text-secondary);
-  font-variant-numeric: tabular-nums;
 }
 
-.example-row {
-  display: flex;
-  align-items: center;
-  gap: 3px;
-}
-
-.example-clue-row {
+.mini-clue {
   width: 24px;
   text-align: right;
-  font-size: 13px;
+  font-size: 14px;
   font-weight: 700;
-  color: var(--text-secondary);
+  color: var(--accent);
   padding-right: 4px;
-  font-variant-numeric: tabular-nums;
+  flex-shrink: 0;
 }
 
-.example-cell {
+.mini-cell {
   width: 32px;
   height: 32px;
   background: var(--surface);
   border-radius: 6px;
-  border: 1px solid var(--border);
-  transition: all 0.2s ease;
+  border: 1.5px solid var(--border);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  font-size: 14px;
+  font-weight: 700;
+  color: var(--danger);
+  transition: all 0.3s ease;
 }
 
-.example-cell.filled {
+.mini-cell.filled {
   background: var(--cell-filled);
   border-color: var(--cell-filled);
-  animation: exampleCellFill 0.4s ease both;
+  animation: miniCellPop 0.4s ease both;
 }
 
-.example-cell.filled:nth-child(2) { animation-delay: 0.2s; }
-.example-cell.filled:nth-child(3) { animation-delay: 0.35s; }
-.example-cell.filled:nth-child(4) { animation-delay: 0.5s; }
+.mini-cell.filled:nth-child(2) { animation-delay: 0.15s; }
+.mini-cell.filled:nth-child(3) { animation-delay: 0.25s; }
+.mini-cell.filled:nth-child(4) { animation-delay: 0.35s; }
+.mini-cell.filled:nth-child(5) { animation-delay: 0.45s; }
 
-@keyframes exampleCellFill {
+.mini-cell.highlight-cross {
+  box-shadow: 0 0 0 2px var(--accent), 0 0 8px var(--accent-glow);
+}
+
+.mini-cell.x-mark {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  color: var(--danger);
+  animation: miniCellPop 0.4s ease both;
+}
+
+.mini-cell.x-mark:nth-child(4) { animation-delay: 0.4s; }
+.mini-cell.x-mark:nth-child(5) { animation-delay: 0.55s; }
+
+@keyframes miniCellPop {
   0% {
-    background: var(--surface);
-    border-color: var(--border);
-    transform: scale(1);
+    opacity: 0;
+    transform: scale(0.7);
   }
-  50% {
-    transform: scale(1.1);
+  60% {
+    transform: scale(1.08);
   }
   100% {
-    background: var(--cell-filled);
-    border-color: var(--cell-filled);
+    opacity: 1;
     transform: scale(1);
   }
+}
+
+.mini-caption {
+  font-size: 12px;
+  color: var(--text-tertiary);
+  font-weight: 600;
+}
+
+/* Controller preview in tutorial */
+.controller-preview {
+  flex-direction: row;
+  gap: 24px;
+  padding: 20px 24px;
+}
+
+.ctrl-preview-dpad {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  align-items: center;
+}
+
+.ctrl-row {
+  display: grid;
+  grid-template-columns: repeat(3, 28px);
+  gap: 2px;
+}
+
+.ctrl-key {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: var(--surface);
+  border: 1px solid var(--border);
+  border-radius: 6px;
+  font-size: 12px;
+  color: var(--text-secondary);
+  box-shadow: var(--shadow-sm);
+}
+
+.ctrl-dot {
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.ctrl-dot::after {
+  content: '';
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--text-tertiary);
+}
+
+.ctrl-preview-actions {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  justify-content: center;
+}
+
+.ctrl-action {
+  padding: 8px 14px;
+  border-radius: 8px;
+  font-size: 12px;
+  font-weight: 700;
+  text-align: center;
+}
+
+.ctrl-action.fill {
+  border: 1.5px solid var(--accent);
+  color: var(--accent);
+  background: var(--accent-light);
+}
+
+.ctrl-action.mark {
+  border: 1.5px solid var(--danger);
+  color: var(--danger);
+  background: var(--danger-light);
 }
 
 /* Dots */

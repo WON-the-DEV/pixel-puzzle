@@ -286,7 +286,7 @@ export default function GameScreen({
         </footer>
       ) : (
         <footer className="controls">
-          <button className="control-btn" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver}>
+          <button className="control-btn" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver} aria-label={`힌트 사용 (${hints}개 남음)`}>
             <span className="icon">
               <LightbulbIcon size={24} color="var(--text)" />
             </span>
@@ -297,6 +297,7 @@ export default function GameScreen({
             className={`control-btn mode-toggle ${mode === 'fill' ? 'mode-fill' : 'mode-mark'}`}
             onClick={onToggleMode}
             disabled={isGameOver}
+            aria-label={`모드 전환 (현재 ${mode === 'fill' ? '색칠' : 'X표시'} 모드)`}
           >
             <div className="mode-toggle-inner">
               <div className={`mode-option ${mode === 'fill' ? 'active' : ''}`}>

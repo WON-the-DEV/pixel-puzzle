@@ -1,27 +1,123 @@
 import { useState, useCallback } from 'react';
-import { WelcomeIllust, NumbersIllust, TapIllust, ToolsIllust } from './icons/Icons.jsx';
+import { NumbersIllust, ControllerIcon } from './icons/Icons.jsx';
+
+/* ── Mini grid examples (CSS-based) ── */
+function RuleExample() {
+  // 1×5 row: clue "3" → ■■■□□
+  return (
+    <div className="tutorial-mini-grid">
+      <div className="mini-grid-row">
+        <span className="mini-clue">3</span>
+        <span className="mini-cell filled" />
+        <span className="mini-cell filled" />
+        <span className="mini-cell filled" />
+        <span className="mini-cell" />
+        <span className="mini-cell" />
+      </div>
+      <p className="mini-caption">"3" = 연속 3칸을 채워요</p>
+    </div>
+  );
+}
+
+function CrossExample() {
+  // 3×3 grid showing row+col intersection
+  return (
+    <div className="tutorial-mini-grid">
+      <div className="mini-grid-cross">
+        <div className="cross-header">
+          <span className="cross-spacer" />
+          <span className="mini-clue-col">1</span>
+          <span className="mini-clue-col">2</span>
+          <span className="mini-clue-col">1</span>
+        </div>
+        <div className="mini-grid-row">
+          <span className="mini-clue">2</span>
+          <span className="mini-cell filled" />
+          <span className="mini-cell filled" />
+          <span className="mini-cell" />
+        </div>
+        <div className="mini-grid-row">
+          <span className="mini-clue">1</span>
+          <span className="mini-cell" />
+          <span className="mini-cell filled highlight-cross" />
+          <span className="mini-cell" />
+        </div>
+        <div className="mini-grid-row">
+          <span className="mini-clue">1</span>
+          <span className="mini-cell" />
+          <span className="mini-cell filled" />
+          <span className="mini-cell filled" />
+        </div>
+      </div>
+      <p className="mini-caption">행과 열이 만나는 곳을 찾아요</p>
+    </div>
+  );
+}
+
+function XMarkExample() {
+  // 1×4 row showing X marks
+  return (
+    <div className="tutorial-mini-grid">
+      <div className="mini-grid-row">
+        <span className="mini-clue">2</span>
+        <span className="mini-cell filled" />
+        <span className="mini-cell filled" />
+        <span className="mini-cell x-mark">✕</span>
+        <span className="mini-cell x-mark">✕</span>
+      </div>
+      <p className="mini-caption">확실히 빈 칸엔 X 표시!</p>
+    </div>
+  );
+}
+
+function ControllerExample() {
+  return (
+    <div className="tutorial-mini-grid controller-preview">
+      <div className="ctrl-preview-dpad">
+        <div className="ctrl-row">
+          <span /><span className="ctrl-key">▲</span><span />
+        </div>
+        <div className="ctrl-row">
+          <span className="ctrl-key">◀</span>
+          <span className="ctrl-dot" />
+          <span className="ctrl-key">▶</span>
+        </div>
+        <div className="ctrl-row">
+          <span /><span className="ctrl-key">▼</span><span />
+        </div>
+      </div>
+      <div className="ctrl-preview-actions">
+        <span className="ctrl-action fill">채우기</span>
+        <span className="ctrl-action mark">X표시</span>
+      </div>
+    </div>
+  );
+}
 
 const STEPS = [
   {
-    Illust: WelcomeIllust,
-    title: '노노그램에 오신 걸 환영해요',
-    description: '숫자 단서를 보고 셀을 채워\n숨겨진 그림을 완성하는 퍼즐이에요',
-  },
-  {
     Illust: NumbersIllust,
-    title: '숫자가 힌트예요',
-    description: '행과 열의 숫자는 연속으로\n채워야 할 셀의 개수를 알려줘요',
-    example: true,
+    title: '숫자는 연속으로 채울 칸 수',
+    description: '행·열 옆 숫자가 연속으로\n채워야 할 셀의 개수예요',
+    MiniExample: RuleExample,
   },
   {
-    Illust: TapIllust,
-    title: '탭으로 색칠해요',
-    description: '셀을 탭하면 색칠돼요\n드래그로 여러 셀을 한번에 채울 수도 있어요',
+    Illust: null,
+    title: '행과 열을 동시에 만족시키세요',
+    description: '같은 칸이 행 단서와 열 단서를\n모두 만족해야 해요',
+    MiniExample: CrossExample,
   },
   {
-    Illust: ToolsIllust,
-    title: '도구를 활용해요',
-    description: 'X표시로 빈 칸을 표시하고\n힌트로 막힐 때 도움받으세요',
+    Illust: null,
+    title: 'X로 빈 칸을 표시하면 편해요',
+    description: '확실히 비어야 할 칸에 X를 찍으면\n실수를 줄일 수 있어요',
+    MiniExample: XMarkExample,
+  },
+  {
+    Illust: null,
+    title: '컨트롤러 모드로 정밀 조작!',
+    description: '십자 키로 이동, 버튼으로 채우기·X표시\n작은 퍼즐에서 특히 편리해요',
+    MiniExample: ControllerExample,
   },
 ];
 
@@ -55,7 +151,7 @@ export default function TutorialScreen({ onComplete }) {
 
   return (
     <div className="tutorial-screen">
-      <button className="tutorial-skip" onClick={handleSkip}>
+      <button className="tutorial-skip" onClick={handleSkip} aria-label="튜토리얼 건너뛰기">
         건너뛰기
       </button>
 
@@ -64,39 +160,17 @@ export default function TutorialScreen({ onComplete }) {
           className={`tutorial-card tutorial-slide-${direction}`}
           key={step}
         >
-          <div className="tutorial-illust">
-            <IllustComponent size={100} />
-          </div>
+          {current.Illust && (
+            <div className="tutorial-illust">
+              <current.Illust size={100} />
+            </div>
+          )}
           <h2 className="tutorial-title">{current.title}</h2>
           <p className="tutorial-desc">{current.description}</p>
 
-          {current.example && (
+          {current.MiniExample && (
             <div className="tutorial-example">
-              <div className="example-grid">
-                <div className="example-header">
-                  <span className="example-clue-col">1</span>
-                  <span className="example-clue-col">3</span>
-                  <span className="example-clue-col">1</span>
-                </div>
-                <div className="example-row">
-                  <span className="example-clue-row">2</span>
-                  <span className="example-cell filled" />
-                  <span className="example-cell filled" />
-                  <span className="example-cell" />
-                </div>
-                <div className="example-row">
-                  <span className="example-clue-row">1</span>
-                  <span className="example-cell" />
-                  <span className="example-cell filled" />
-                  <span className="example-cell" />
-                </div>
-                <div className="example-row">
-                  <span className="example-clue-row">1</span>
-                  <span className="example-cell" />
-                  <span className="example-cell filled" />
-                  <span className="example-cell filled" />
-                </div>
-              </div>
+              <current.MiniExample />
             </div>
           )}
         </div>

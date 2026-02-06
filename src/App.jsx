@@ -34,6 +34,7 @@ export default function App() {
   const [homeTab, setHomeTab] = useState('puzzle'); // 'puzzle' | 'collection'
   const [homeScrollY, setHomeScrollY] = useState(0);
   const [darkMode, setDarkMode] = useState(() => loadSettings().darkMode);
+  const [levelTransition, setLevelTransition] = useState(null); // 'slide-left-in' | null
   const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive } = useGame();
 
   // Apply dark mode on initial load
@@ -132,7 +133,10 @@ export default function App() {
 
   const handleNextLevel = useCallback(() => {
     const nextLevel = gameState.level + 1;
+    setLevelTransition('slide-left-in');
     startLevel(nextLevel);
+    // Clear transition class after animation completes
+    setTimeout(() => setLevelTransition(null), 450);
   }, [gameState.level, startLevel]);
 
   const handleOpenSettings = useCallback(() => {
@@ -270,7 +274,7 @@ export default function App() {
 
   if (screen === 'game') {
     return (
-      <div className="screen-transition fade-in" key={`game-${gameState.level}`}>
+      <div className={`screen-transition ${levelTransition || 'fade-in'}`} key={`game-${gameState.level}`}>
         <GameScreen
           gameState={gameState}
           onToggleCell={toggleCell}

@@ -1,25 +1,26 @@
-# 🧩 노노그램 - 픽셀 퍼즐
+# 🧩 Pixel Puzzle — 노노그램
 
-토스 스타일의 깔끔한 노노그램 퍼즐 게임.
+모바일 최적화된 노노그램 퍼즐 게임
 
-🎮 **[플레이하기](https://won-the-dev.github.io/toss-nonogram/)**
+## 특징
 
-## 기능
-
-- 🎯 50개 레벨 (5×5 ~ 15×15)
-- 🎨 5개 프리셋 퍼즐 (하트, 별, 스마일, 집, 고양이)
-- ✏️ 색칠/X표시 모드 전환
-- ↩️ Undo/Redo
-- 💡 힌트 시스템
-- 📱 터치 & 드래그 입력
-- ⏱️ 타이머
+- 🎯 150개 핸드메이드 퍼즐 (5×5 ~ 15×15)
+- 🎮 터치 모드 + 컨트롤러 모드 (D-pad)
+- 🌙 다크 모드
 - 💾 자동 저장 (localStorage)
-- 📱 모바일 우선 반응형
+- 🖼️ 컬렉션 시스템 — 퍼즐을 모아 큰 그림 완성
+- 🔊 Web Audio API 사운드 효과
+- 📳 햅틱 피드백
+
+## 플레이
+
+👉 [https://won-the-dev.github.io/toss-nonogram/](https://won-the-dev.github.io/toss-nonogram/)
 
 ## 기술 스택
 
 - React 19 + Vite
-- Canvas API 렌더링
+- Canvas API (게임 보드 렌더링)
+- Web Audio API (오실레이터 기반 사운드)
 - GitHub Pages 배포
 
 ## 로컬 실행
@@ -29,8 +30,13 @@ npm install
 npm run dev
 ```
 
-## 빌드
+## 빌드 & 배포
 
 ```bash
 npm run build
+npx gh-pages -d dist
 ```
+
+## 라이선스
+
+MIT

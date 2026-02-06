@@ -117,21 +117,21 @@ export function playHint() {
   ]);
 }
 
-/** 라이프 감소 - 경고음 */
+/** 라이프 감소 - 경고음 (부드럽게 조정) */
 export function playLifeLost() {
   playNotes([
-    { freq: 400, start: 0, dur: 0.15, type: 'sawtooth', vol: 0.1 },
-    { freq: 300, start: 0.12, dur: 0.2, type: 'sawtooth', vol: 0.08 },
+    { freq: 380, start: 0, dur: 0.12, type: 'triangle', vol: 0.09 },
+    { freq: 280, start: 0.1, dur: 0.18, type: 'triangle', vol: 0.07 },
   ]);
 }
 
-/** 게임 오버 - 실패 사운드 */
+/** 게임 오버 - 실패 사운드 (덜 거슬리게) */
 export function playGameOver() {
   playNotes([
-    { freq: 400, start: 0, dur: 0.2, type: 'sawtooth', vol: 0.12 },
-    { freq: 350, start: 0.15, dur: 0.2, type: 'sawtooth', vol: 0.1 },
-    { freq: 300, start: 0.3, dur: 0.2, type: 'sawtooth', vol: 0.08 },
-    { freq: 200, start: 0.45, dur: 0.4, type: 'sawtooth', vol: 0.1 },
+    { freq: 380, start: 0, dur: 0.18, type: 'triangle', vol: 0.1 },
+    { freq: 330, start: 0.14, dur: 0.18, type: 'triangle', vol: 0.09 },
+    { freq: 280, start: 0.28, dur: 0.2, type: 'triangle', vol: 0.07 },
+    { freq: 200, start: 0.42, dur: 0.35, type: 'sine', vol: 0.08 },
   ]);
 }
 
