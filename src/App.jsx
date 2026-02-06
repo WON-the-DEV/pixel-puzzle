@@ -1,11 +1,28 @@
 import { useState, useCallback, useEffect } from 'react';
 import HomeScreen from './components/HomeScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
+import TutorialScreen from './components/TutorialScreen.jsx';
 import { useGame } from './hooks/useGame.js';
 import { loadAppState, saveAppState } from './lib/storage.js';
 
+function hasSeenTutorial() {
+  try {
+    return localStorage.getItem('nonogram_tutorial_seen') === '1';
+  } catch {
+    return false;
+  }
+}
+
+function markTutorialSeen() {
+  try {
+    localStorage.setItem('nonogram_tutorial_seen', '1');
+  } catch {
+    // ignore
+  }
+}
+
 export default function App() {
-  const [screen, setScreen] = useState('home'); // 'home' | 'game'
+  const [screen, setScreen] = useState(() => hasSeenTutorial() ? 'home' : 'tutorial'); // 'tutorial' | 'home' | 'game'
   const [appState, setAppState] = useState(loadAppState);
   const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint } = useGame();
 
@@ -40,6 +57,11 @@ export default function App() {
     [startLevel]
   );
 
+  const handleTutorialComplete = useCallback(() => {
+    markTutorialSeen();
+    setScreen('home');
+  }, []);
+
   const handleGoHome = useCallback(() => {
     setScreen('home');
   }, []);
@@ -60,22 +82,36 @@ export default function App() {
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
   }, [appState]);
 
-  if (screen === 'game') {
+  if (screen === 'tutorial') {
     return (
-      <GameScreen
-        gameState={gameState}
-        onToggleCell={toggleCell}
-        onFillCell={fillCell}
-        onEndDrag={endDrag}
-        onToggleMode={toggleMode}
-        onUndo={undo}
-        onRedo={redo}
-        onUseHint={useHint}
-        onGoHome={handleGoHome}
-        onNextLevel={handleNextLevel}
-      />
+      <div className="screen-transition fade-in">
+        <TutorialScreen onComplete={handleTutorialComplete} />
+      </div>
     );
   }
 
-  return <HomeScreen appState={appState} onStartLevel={handleStartLevel} />;
+  if (screen === 'game') {
+    return (
+      <div className="screen-transition fade-in" key={`game-${gameState.level}`}>
+        <GameScreen
+          gameState={gameState}
+          onToggleCell={toggleCell}
+          onFillCell={fillCell}
+          onEndDrag={endDrag}
+          onToggleMode={toggleMode}
+          onUndo={undo}
+          onRedo={redo}
+          onUseHint={useHint}
+          onGoHome={handleGoHome}
+          onNextLevel={handleNextLevel}
+        />
+      </div>
+    );
+  }
+
+  return (
+    <div className="screen-transition fade-in" key="home">
+      <HomeScreen appState={appState} onStartLevel={handleStartLevel} />
+    </div>
+  );
 }

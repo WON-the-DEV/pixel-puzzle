@@ -84,6 +84,19 @@ body {
   background: var(--surface);
   border-radius: 16px;
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.04);
+  animation: statsSlideIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.1s;
+}
+
+@keyframes statsSlideIn {
+  from {
+    opacity: 0;
+    transform: translateY(12px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .stat {
@@ -113,6 +126,23 @@ body {
 /* Level sections */
 .level-section-group {
   margin: 0 20px 24px;
+  animation: sectionFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+}
+
+.level-section-group:nth-child(2) { animation-delay: 0.15s; }
+.level-section-group:nth-child(3) { animation-delay: 0.25s; }
+.level-section-group:nth-child(4) { animation-delay: 0.35s; }
+.level-section-group:nth-child(5) { animation-delay: 0.45s; }
+
+@keyframes sectionFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(16px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
 }
 
 .section-title {
@@ -144,7 +174,7 @@ body {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s ease;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   box-shadow: 0 1px 3px rgba(0, 0, 0, 0.06);
   color: var(--text);
   display: flex;
@@ -152,8 +182,22 @@ body {
   justify-content: center;
 }
 
+@media (hover: hover) {
+  .level-btn:hover:not(:disabled) {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+  }
+  .level-btn.completed:hover {
+    box-shadow: 0 4px 16px rgba(0, 196, 113, 0.3);
+  }
+  .level-btn.current:hover {
+    box-shadow: 0 4px 20px rgba(49, 130, 246, 0.5);
+  }
+}
+
 .level-btn:active:not(:disabled) {
-  transform: scale(0.94);
+  transform: scale(0.92);
+  transition-duration: 0.1s;
 }
 
 .level-btn.completed {
@@ -275,6 +319,19 @@ body {
   border-radius: 16px;
   box-shadow: 0 2px 12px rgba(0, 0, 0, 0.06);
   touch-action: none;
+  animation: canvasAppear 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.1s;
+}
+
+@keyframes canvasAppear {
+  from {
+    opacity: 0;
+    transform: scale(0.96);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
 }
 
 /* Controls */
@@ -296,14 +353,15 @@ body {
   border: none;
   cursor: pointer;
   border-radius: 14px;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
   position: relative;
   color: var(--text);
 }
 
 .control-btn:active:not(:disabled) {
   background: var(--bg);
-  transform: scale(0.95);
+  transform: scale(0.9);
+  transition-duration: 0.1s;
 }
 
 .control-btn:disabled {
@@ -359,10 +417,12 @@ body {
   justify-content: center;
   align-items: center;
   z-index: 100;
-  animation: fadeIn 0.3s ease;
+  animation: modalFadeIn 0.4s cubic-bezier(0.16, 1, 0.3, 1) both;
+  backdrop-filter: blur(4px);
+  -webkit-backdrop-filter: blur(4px);
 }
 
-@keyframes fadeIn {
+@keyframes modalFadeIn {
   from { opacity: 0; }
   to { opacity: 1; }
 }
@@ -374,25 +434,41 @@ body {
   text-align: center;
   max-width: 320px;
   width: 90%;
-  animation: slideUp 0.35s ease;
+  animation: modalSlideUp 0.5s cubic-bezier(0.16, 1, 0.3, 1) both;
+  animation-delay: 0.05s;
   box-shadow: 0 20px 60px rgba(0, 0, 0, 0.15);
 }
 
-@keyframes slideUp {
-  from { transform: translateY(30px); opacity: 0; }
-  to { transform: translateY(0); opacity: 1; }
+@keyframes modalSlideUp {
+  from {
+    transform: translateY(40px) scale(0.95);
+    opacity: 0;
+  }
+  to {
+    transform: translateY(0) scale(1);
+    opacity: 1;
+  }
 }
 
 .modal-emoji {
   font-size: 56px;
   margin-bottom: 12px;
-  animation: bounce 0.6s ease;
+  animation: emojiBounce 0.7s cubic-bezier(0.34, 1.56, 0.64, 1) both;
+  animation-delay: 0.2s;
 }
 
-@keyframes bounce {
-  0% { transform: scale(0); }
-  50% { transform: scale(1.2); }
-  100% { transform: scale(1); }
+@keyframes emojiBounce {
+  0% {
+    transform: scale(0) rotate(-10deg);
+    opacity: 0;
+  }
+  50% {
+    transform: scale(1.2) rotate(5deg);
+  }
+  100% {
+    transform: scale(1) rotate(0deg);
+    opacity: 1;
+  }
 }
 
 .modal-content h2 {
@@ -455,12 +531,13 @@ body {
   font-size: 15px;
   font-weight: 700;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .primary-btn:active {
   background: var(--primary-dark);
-  transform: scale(0.98);
+  transform: scale(0.96);
+  transition-duration: 0.1s;
 }
 
 .secondary-btn {
@@ -473,12 +550,297 @@ body {
   font-size: 15px;
   font-weight: 600;
   cursor: pointer;
-  transition: all 0.15s;
+  transition: all 0.2s cubic-bezier(0.25, 0.46, 0.45, 0.94);
 }
 
 .secondary-btn:active {
   background: var(--border);
-  transform: scale(0.98);
+  transform: scale(0.96);
+  transition-duration: 0.1s;
+}
+
+/* ═══════════════════════════════════════
+   Screen Transitions
+   ═══════════════════════════════════════ */
+
+.screen-transition {
+  height: 100%;
+}
+
+.screen-transition.fade-in {
+  animation: screenFadeIn 0.35s ease both;
+}
+
+@keyframes screenFadeIn {
+  from {
+    opacity: 0;
+    transform: translateY(8px);
+  }
+  to {
+    opacity: 1;
+    transform: translateY(0);
+  }
+}
+
+/* ═══════════════════════════════════════
+   Tutorial Screen
+   ═══════════════════════════════════════ */
+
+.tutorial-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--surface);
+  padding: 0 24px;
+  position: relative;
+}
+
+.tutorial-skip {
+  position: absolute;
+  top: 16px;
+  right: 20px;
+  background: none;
+  border: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--text-secondary);
+  cursor: pointer;
+  padding: 8px 12px;
+  border-radius: 8px;
+  transition: color 0.2s, background 0.2s;
+  z-index: 2;
+}
+
+.tutorial-skip:active {
+  background: var(--bg);
+  color: var(--text);
+}
+
+.tutorial-body {
+  flex: 1;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  overflow: hidden;
+}
+
+.tutorial-card {
+  text-align: center;
+  padding: 20px 0;
+  max-width: 340px;
+  width: 100%;
+}
+
+.tutorial-card.tutorial-slide-next {
+  animation: tutorialSlideNext 0.35s ease both;
+}
+
+.tutorial-card.tutorial-slide-prev {
+  animation: tutorialSlidePrev 0.35s ease both;
+}
+
+@keyframes tutorialSlideNext {
+  from {
+    opacity: 0;
+    transform: translateX(40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+@keyframes tutorialSlidePrev {
+  from {
+    opacity: 0;
+    transform: translateX(-40px);
+  }
+  to {
+    opacity: 1;
+    transform: translateX(0);
+  }
+}
+
+.tutorial-emoji {
+  font-size: 64px;
+  margin-bottom: 20px;
+  animation: tutorialEmojiPop 0.4s ease both;
+  animation-delay: 0.1s;
+}
+
+@keyframes tutorialEmojiPop {
+  0% {
+    transform: scale(0);
+    opacity: 0;
+  }
+  60% {
+    transform: scale(1.15);
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+.tutorial-title {
+  font-size: 22px;
+  font-weight: 800;
+  letter-spacing: -0.5px;
+  margin-bottom: 12px;
+  color: var(--text);
+}
+
+.tutorial-desc {
+  font-size: 15px;
+  line-height: 1.6;
+  color: var(--text-secondary);
+  white-space: pre-line;
+}
+
+/* Tutorial example grid */
+.tutorial-example {
+  margin-top: 24px;
+  display: flex;
+  justify-content: center;
+}
+
+.example-grid {
+  display: inline-flex;
+  flex-direction: column;
+  gap: 3px;
+  background: var(--bg);
+  padding: 16px;
+  border-radius: 14px;
+}
+
+.example-header {
+  display: flex;
+  gap: 3px;
+  padding-left: 28px;
+}
+
+.example-clue-col {
+  width: 32px;
+  text-align: center;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.example-row {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+}
+
+.example-clue-row {
+  width: 24px;
+  text-align: right;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  padding-right: 4px;
+}
+
+.example-cell {
+  width: 32px;
+  height: 32px;
+  background: var(--surface);
+  border-radius: 6px;
+  border: 1px solid var(--border);
+  transition: all 0.2s ease;
+}
+
+.example-cell.filled {
+  background: var(--text);
+  border-color: var(--text);
+  animation: exampleCellFill 0.4s ease both;
+}
+
+.example-cell.filled:nth-child(2) { animation-delay: 0.2s; }
+.example-cell.filled:nth-child(3) { animation-delay: 0.35s; }
+.example-cell.filled:nth-child(4) { animation-delay: 0.5s; }
+
+@keyframes exampleCellFill {
+  0% {
+    background: var(--surface);
+    border-color: var(--border);
+    transform: scale(1);
+  }
+  50% {
+    transform: scale(1.1);
+  }
+  100% {
+    background: var(--text);
+    border-color: var(--text);
+    transform: scale(1);
+  }
+}
+
+/* Dots */
+.tutorial-dots {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  margin-bottom: 24px;
+}
+
+.tutorial-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--border);
+  transition: all 0.3s ease;
+}
+
+.tutorial-dot.active {
+  width: 24px;
+  background: var(--primary);
+}
+
+/* Navigation */
+.tutorial-nav {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  padding-bottom: calc(32px + var(--safe-bottom));
+}
+
+.tutorial-btn-primary {
+  flex: 1;
+  padding: 16px 24px;
+  background: var(--primary);
+  color: white;
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-btn-primary:active {
+  background: var(--primary-dark);
+  transform: scale(0.97);
+}
+
+.tutorial-btn-secondary {
+  padding: 16px 24px;
+  background: var(--bg);
+  color: var(--text);
+  border: none;
+  border-radius: 14px;
+  font-size: 16px;
+  font-weight: 600;
+  cursor: pointer;
+  transition: all 0.2s ease;
+}
+
+.tutorial-btn-secondary:active {
+  background: var(--border);
+  transform: scale(0.97);
 }
 
 /* ═══════════════════════════════════════
@@ -487,7 +849,8 @@ body {
 
 @media (min-width: 501px) {
   .home-screen,
-  .game-screen {
+  .game-screen,
+  .tutorial-screen {
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
   }
