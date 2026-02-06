@@ -2,7 +2,7 @@ import { useState, useCallback, useEffect } from 'react';
 import { loadSettings, saveSettings } from '../lib/settings.js';
 import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashIcon, AlertIcon, CheckIcon } from './icons/Icons.jsx';
 
-export default function SettingsScreen({ onGoHome, onResetTutorial }) {
+export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll }) {
   const [settings, setSettings] = useState(loadSettings);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -142,14 +142,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
           <button
             className="settings-action-btn"
             onClick={() => {
-              try {
-                const state = JSON.parse(localStorage.getItem('nonogram_state') || '{}');
-                const allLevels = Array.from({ length: 50 }, (_, i) => i + 1);
-                state.completedLevels = allLevels;
-                state.currentLevel = 51;
-                localStorage.setItem('nonogram_state', JSON.stringify(state));
-                window.location.reload();
-              } catch { /* ignore */ }
+              if (onUnlockAll) onUnlockAll();
             }}
             style={{ color: 'var(--accent)' }}
           >

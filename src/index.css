@@ -195,12 +195,16 @@ body {
   color: var(--accent);
 }
 
-/* Tab bar */
+/* Tab bar — sticky */
 .home-tab-bar {
   display: flex;
   background: var(--surface);
   padding: 0 20px;
   gap: 0;
+  position: sticky;
+  top: 0;
+  z-index: 10;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .home-tab-bar::after {
@@ -219,6 +223,10 @@ body {
   cursor: pointer;
   transition: all 0.2s;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
 }
 
 .home-tab.active {
@@ -349,7 +357,7 @@ body {
 /* Home body */
 .home-body {
   flex: 1;
-  padding-bottom: 40px;
+  padding-bottom: 80px; /* space for fixed bottom nav */
 }
 
 /* Level sections */
@@ -1478,10 +1486,14 @@ body {
   justify-content: space-around;
   padding: 6px 12px calc(10px + var(--safe-bottom));
   background: var(--surface);
-  position: sticky;
+  position: fixed;
   bottom: 0;
+  left: 0;
+  right: 0;
+  max-width: 500px;
+  margin: 0 auto;
+  z-index: 20;
   border-top: none;
-  position: relative;
 }
 
 .home-nav::before {
@@ -1790,6 +1802,141 @@ body {
 @keyframes zoomFadeIn {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
+}
+
+/* ═══════════════════════════════════════
+   Collection View — Redesigned (Luna Story BIG)
+   ═══════════════════════════════════════ */
+
+.collection-preview-wrapper {
+  display: flex;
+  justify-content: center;
+  margin: 12px 0;
+}
+
+.big-picture-canvas {
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+
+.collection-diff-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin-top: 4px;
+}
+
+/* Tile grid */
+.tile-grid {
+  display: grid;
+  gap: 6px;
+  margin-top: 12px;
+}
+
+.tile-cell {
+  aspect-ratio: 1;
+  border-radius: var(--radius-sm);
+  border: none;
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  overflow: hidden;
+  padding: 0;
+}
+
+.tile-available {
+  background: var(--bg);
+  border: 1.5px solid var(--border);
+  box-shadow: var(--shadow-sm);
+}
+
+.tile-available:active {
+  transform: scale(0.94);
+  border-color: var(--accent);
+}
+
+.tile-completed {
+  background: var(--surface);
+  border: 1.5px solid var(--success);
+  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.15);
+  cursor: default;
+}
+
+.tile-empty {
+  background: transparent;
+  cursor: default;
+  border: 1px dashed var(--border-light);
+  opacity: 0.3;
+}
+
+.tile-locked-content {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+}
+
+.tile-number {
+  font-size: 12px;
+  font-weight: 700;
+  color: var(--text-secondary);
+}
+
+.tile-mini-canvas {
+  border-radius: 2px;
+}
+
+/* ═══════════════════════════════════════
+   Color Palette Bar (Multi-color mode)
+   ═══════════════════════════════════════ */
+
+.color-palette-bar {
+  display: flex;
+  justify-content: center;
+  gap: 8px;
+  padding: 8px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border-light);
+}
+
+.color-palette-btn {
+  width: 40px;
+  height: 40px;
+  border-radius: var(--radius-md);
+  border: 2.5px solid transparent;
+  background: var(--bg);
+  cursor: pointer;
+  transition: all 0.2s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  position: relative;
+  padding: 0;
+}
+
+.color-palette-btn.selected {
+  border-color: var(--palette-color);
+  box-shadow: 0 0 0 2px var(--bg), 0 0 0 4px var(--palette-color);
+  transform: scale(1.1);
+}
+
+.color-palette-btn:active {
+  transform: scale(0.92);
+}
+
+.color-palette-swatch {
+  width: 24px;
+  height: 24px;
+  border-radius: 6px;
+  display: block;
+}
+
+.color-palette-btn.selected .color-palette-swatch {
+  width: 20px;
+  height: 20px;
 }
 
 /* Small screens */

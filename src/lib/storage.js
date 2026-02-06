@@ -4,6 +4,7 @@
 
 const STORAGE_KEY = 'nonogram_state';
 const GAME_SAVE_KEY = 'nonogram_game_save';
+const COLLECTION_KEY = 'nonogram_collection';
 
 const DEFAULT_STATE = {
   currentLevel: 1,
@@ -56,5 +57,31 @@ export function clearGameSave() {
     localStorage.removeItem(GAME_SAVE_KEY);
   } catch {
     // ignore
+  }
+}
+
+// ─── Collection Progress ───
+
+const DEFAULT_COLLECTION = {
+  completedTiles: [], // ["collectionId-tileRow-tileCol", ...]
+};
+
+export function loadCollectionProgress() {
+  try {
+    const saved = localStorage.getItem(COLLECTION_KEY);
+    if (saved) {
+      return { ...DEFAULT_COLLECTION, ...JSON.parse(saved) };
+    }
+  } catch (e) {
+    console.error('Failed to load collection progress:', e);
+  }
+  return { ...DEFAULT_COLLECTION };
+}
+
+export function saveCollectionProgress(state) {
+  try {
+    localStorage.setItem(COLLECTION_KEY, JSON.stringify(state));
+  } catch (e) {
+    console.error('Failed to save collection progress:', e);
   }
 }

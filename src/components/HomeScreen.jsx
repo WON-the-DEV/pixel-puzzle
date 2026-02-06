@@ -1,5 +1,5 @@
 import { useMemo, useState, useCallback } from 'react';
-import { getSizeForLevel, PRESET_PUZZLES, COLLECTIONS, isLevelUnlocked, createPuzzleForLevel } from '../lib/puzzle.js';
+import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel } from '../lib/puzzle.js';
 import CollectionView from './CollectionView.jsx';
 import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, SettingsIcon, GridIcon, VideoIcon, DiamondIcon, DifficultyBadge } from './icons/Icons.jsx';
 
@@ -28,7 +28,7 @@ function StarsDisplay({ stars }) {
   );
 }
 
-export default function HomeScreen({ appState, onStartLevel, onOpenSettings, onWatchAd, onBuyHints }) {
+export default function HomeScreen({ appState, collectionProgress, onStartLevel, onOpenSettings, onWatchAd, onBuyHints, onStartCollectionTile }) {
   const { completedLevels = [], currentLevel = 1, bestTimes = {}, bestStars = {}, hints = 3 } = appState;
   const completedSet = useMemo(() => new Set(completedLevels), [completedLevels]);
   const [activeTab, setActiveTab] = useState('puzzle');
@@ -49,18 +49,20 @@ export default function HomeScreen({ appState, onStartLevel, onOpenSettings, onW
         </div>
       </header>
 
-      {/* Tab bar */}
+      {/* Tab bar — sticky */}
       <div className="home-tab-bar">
         <button
           className={`home-tab ${activeTab === 'puzzle' ? 'active' : ''}`}
           onClick={() => setActiveTab('puzzle')}
         >
+          <PuzzleIcon size={18} color={activeTab === 'puzzle' ? 'var(--accent)' : 'var(--text-tertiary)'} />
           퍼즐
         </button>
         <button
           className={`home-tab ${activeTab === 'collection' ? 'active' : ''}`}
           onClick={() => setActiveTab('collection')}
         >
+          <GridIcon size={18} color={activeTab === 'collection' ? 'var(--accent)' : 'var(--text-tertiary)'} />
           컬렉션
         </button>
       </div>
@@ -173,12 +175,13 @@ export default function HomeScreen({ appState, onStartLevel, onOpenSettings, onW
           </>
         ) : (
           <CollectionView
-            completedLevels={completedLevels}
+            collectionProgress={collectionProgress}
+            onStartTile={onStartCollectionTile}
           />
         )}
       </div>
 
-      {/* Bottom nav */}
+      {/* Bottom nav — fixed */}
       <nav className="home-nav">
         <div className="home-nav-item active">
           <span className="home-nav-icon">

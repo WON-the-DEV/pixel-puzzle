@@ -1,10 +1,11 @@
 import { useState, useCallback, useEffect } from 'react';
 import HomeScreen from './components/HomeScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
+import CollectionGameScreen from './components/CollectionGameScreen.jsx';
 import TutorialScreen from './components/TutorialScreen.jsx';
 import SettingsScreen from './components/SettingsScreen.jsx';
 import { useGame } from './hooks/useGame.js';
-import { loadAppState, saveAppState } from './lib/storage.js';
+import { loadAppState, saveAppState, loadCollectionProgress, saveCollectionProgress } from './lib/storage.js';
 import { initAudio } from './lib/sound.js';
 import { calculateStars } from './lib/puzzle.js';
 import { loadSettings } from './lib/settings.js';
@@ -28,6 +29,8 @@ function markTutorialSeen() {
 export default function App() {
   const [screen, setScreen] = useState(() => hasSeenTutorial() ? 'home' : 'tutorial');
   const [appState, setAppState] = useState(loadAppState);
+  const [collectionProgress, setCollectionProgress] = useState(loadCollectionProgress);
+  const [activeCollectionGame, setActiveCollectionGame] = useState(null); // { collectionId, tileRow, tileCol }
   const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint, clearAutoX, restartLevel } = useGame();
 
   // Apply dark mode on initial load
@@ -59,6 +62,11 @@ export default function App() {
   useEffect(() => {
     saveAppState(appState);
   }, [appState]);
+
+  // Save collection progress when it changes
+  useEffect(() => {
+    saveCollectionProgress(collectionProgress);
+  }, [collectionProgress]);
 
   // Handle level completion — update state + award hint
   useEffect(() => {
@@ -104,6 +112,7 @@ export default function App() {
 
   const handleGoHome = useCallback(() => {
     setScreen('home');
+    setActiveCollectionGame(null);
   }, []);
 
   const handleNextLevel = useCallback(() => {
@@ -132,9 +141,22 @@ export default function App() {
     useHint();
   }, [appState.hints, useHint]);
 
+  // 모든 퍼즐 해금 (버그 수정: App state를 직접 업데이트)
+  const handleUnlockAll = useCallback(() => {
+    setAppState((prev) => {
+      const allLevels = Array.from({ length: 50 }, (_, i) => i + 1);
+      return {
+        ...prev,
+        completedLevels: allLevels,
+        currentLevel: 51,
+      };
+    });
+    // 설정 화면에서 홈으로 돌아가기
+    setScreen('home');
+  }, []);
+
   // 광고 시청 (placeholder)
   const handleWatchAd = useCallback(() => {
-    // TODO: 실제 광고 SDK 연동
     setAppState((prev) => ({
       ...prev,
       hints: prev.hints + 1,
@@ -144,7 +166,6 @@ export default function App() {
 
   // 힌트 구매 (placeholder)
   const handleBuyHints = useCallback(() => {
-    // TODO: 실제 인앱 결제 연동
     setAppState((prev) => ({
       ...prev,
       hints: prev.hints + 5,
@@ -152,16 +173,40 @@ export default function App() {
     alert('힌트 5개 구매 완료! 💎');
   }, []);
 
+  // 컬렉션 타일 게임 시작
+  const handleStartCollectionTile = useCallback((collectionId, tileRow, tileCol) => {
+    setActiveCollectionGame({ collectionId, tileRow, tileCol });
+    setScreen('collection-game');
+  }, []);
+
+  // 컬렉션 타일 완료
+  const handleCollectionTileComplete = useCallback((collectionId, tileRow, tileCol) => {
+    setCollectionProgress((prev) => {
+      const key = `${collectionId}-${tileRow}-${tileCol}`;
+      if (prev.completedTiles.includes(key)) return prev;
+      return {
+        ...prev,
+        completedTiles: [...prev.completedTiles, key],
+      };
+    });
+    // 힌트 보상
+    setAppState((prev) => ({
+      ...prev,
+      hints: prev.hints + 1,
+    }));
+  }, []);
+
   // Save on visibility change
   useEffect(() => {
     const onVisibilityChange = () => {
       if (document.hidden) {
         saveAppState(appState);
+        saveCollectionProgress(collectionProgress);
       }
     };
     document.addEventListener('visibilitychange', onVisibilityChange);
     return () => document.removeEventListener('visibilitychange', onVisibilityChange);
-  }, [appState]);
+  }, [appState, collectionProgress]);
 
   if (screen === 'tutorial') {
     return (
@@ -174,7 +219,34 @@ export default function App() {
   if (screen === 'settings') {
     return (
       <div className="screen-transition fade-in" key="settings">
-        <SettingsScreen onGoHome={handleGoHome} onResetTutorial={handleResetTutorial} />
+        <SettingsScreen
+          onGoHome={handleGoHome}
+          onResetTutorial={handleResetTutorial}
+          onUnlockAll={handleUnlockAll}
+        />
+      </div>
+    );
+  }
+
+  if (screen === 'collection-game' && activeCollectionGame) {
+    return (
+      <div className="screen-transition fade-in" key={`cg-${activeCollectionGame.collectionId}-${activeCollectionGame.tileRow}-${activeCollectionGame.tileCol}`}>
+        <CollectionGameScreen
+          collectionId={activeCollectionGame.collectionId}
+          tileRow={activeCollectionGame.tileRow}
+          tileCol={activeCollectionGame.tileCol}
+          onGoHome={handleGoHome}
+          onComplete={handleCollectionTileComplete}
+          hints={appState.hints}
+          onUseHint={() => {
+            if (appState.hints <= 0) return false;
+            setAppState((prev) => ({
+              ...prev,
+              hints: Math.max(0, prev.hints - 1),
+            }));
+            return true;
+          }}
+        />
       </div>
     );
   }
@@ -204,10 +276,12 @@ export default function App() {
     <div className="screen-transition fade-in" key="home">
       <HomeScreen
         appState={appState}
+        collectionProgress={collectionProgress}
         onStartLevel={handleStartLevel}
         onOpenSettings={handleOpenSettings}
         onWatchAd={handleWatchAd}
         onBuyHints={handleBuyHints}
+        onStartCollectionTile={handleStartCollectionTile}
       />
     </div>
   );
