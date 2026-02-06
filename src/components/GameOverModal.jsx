@@ -1,6 +1,11 @@
-import { BrokenHeartIcon } from './icons/Icons.jsx';
+import { BrokenHeartIcon, VideoIcon } from './icons/Icons.jsx';
 
-export default function GameOverModal({ level, onRestart, onHome }) {
+export default function GameOverModal({ level, onRestart, onHome, onRevive, usedRevive }) {
+  const handleRevive = () => {
+    alert('광고 시청 완료! ❤️ 부활!');
+    if (onRevive) onRevive();
+  };
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <div className="modal-content game-over-modal">
@@ -17,6 +22,12 @@ export default function GameOverModal({ level, onRestart, onHome }) {
             <span className="result-stat-label">레벨</span>
           </div>
         </div>
+        {!usedRevive && onRevive && (
+          <button className="revive-btn" onClick={handleRevive}>
+            <VideoIcon size={20} color="white" />
+            <span>광고 보고 계속하기</span>
+          </button>
+        )}
         <div className="modal-buttons">
           <button className="secondary-btn" onClick={onHome}>
             홈으로

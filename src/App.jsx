@@ -33,7 +33,7 @@ export default function App() {
   const [activeCollectionGame, setActiveCollectionGame] = useState(null); // { collectionId, tileRow, tileCol }
   const [homeTab, setHomeTab] = useState('puzzle'); // 'puzzle' | 'collection'
   const [homeScrollY, setHomeScrollY] = useState(0);
-  const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint, clearAutoX, restartLevel } = useGame();
+  const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint, clearAutoX, restartLevel, revive } = useGame();
 
   // Apply dark mode on initial load
   useEffect(() => {
@@ -270,6 +270,7 @@ export default function App() {
           onGoHome={handleGoHome}
           onNextLevel={handleNextLevel}
           onRestartLevel={handleRestartLevel}
+          onRevive={revive}
           hints={appState.hints}
         />
       </div>

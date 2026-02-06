@@ -26,9 +26,10 @@ export default function GameScreen({
   onGoHome,
   onNextLevel,
   onRestartLevel,
+  onRevive,
   hints,
 }) {
-  const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife, mistakeFlashCells } = gameState;
+  const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife, mistakeFlashCells, usedRevive } = gameState;
   const [displayTime, setDisplayTime] = useState('00:00');
   const timerRef = useRef(null);
   const prevCompleteRowsRef = useRef(new Set());
@@ -69,6 +70,10 @@ export default function GameScreen({
       wasGameOverRef.current = true;
       playGameOver();
       hapticGameOver();
+    }
+    // Reset on revive so sound plays again if player dies again
+    if (!isGameOver && wasGameOverRef.current) {
+      wasGameOverRef.current = false;
     }
   }, [isGameOver]);
 
@@ -271,6 +276,8 @@ export default function GameScreen({
           level={level}
           onRestart={onRestartLevel}
           onHome={onGoHome}
+          onRevive={onRevive}
+          usedRevive={usedRevive}
         />
       )}
     </div>

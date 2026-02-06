@@ -2,7 +2,7 @@ import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { COLLECTION_DATA, createCollectionPuzzle, checkMonoSolution } from '../lib/collections.js';
 import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint, playLifeLost, playGameOver, playAutoX } from '../lib/sound.js';
 import { hapticFill, hapticLineComplete, hapticPuzzleComplete, hapticLifeLost, hapticGameOver } from '../lib/haptic.js';
-import { BackIcon, HeartIcon, LightbulbIcon, UndoIcon, RedoIcon, PencilIcon, XMarkIcon } from './icons/Icons.jsx';
+import { BackIcon, HeartIcon, LightbulbIcon, UndoIcon, RedoIcon, PencilIcon, XMarkIcon, VideoIcon } from './icons/Icons.jsx';
 
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
@@ -91,6 +91,7 @@ const INITIAL_STATE = {
   isComplete: false, lives: 3, maxLives: 3,
   isGameOver: false, autoXCells: [], filledCorrect: 0, lostLife: false,
   mistakeFlashCells: [],
+  usedRevive: false,
 };
 
 function gameReducer(state, action) {
@@ -165,15 +166,25 @@ function gameReducer(state, action) {
     case 'FILL_CELL': {
       if (state.isComplete || state.isGameOver) return state;
       const { row, col, value } = action;
-      const current = state.playerGrid[row][col];
-      if (current === value) return state;
-      // X 표시된 셀은 fill 모드에서 무시 (드래그 중에도)
-      if (value === 1 && current === 2) return state;
+      if (state.playerGrid[row][col] === value) return state;
+      // 이미 X(2)인 셀은 무시 — 추가 라이프 감소 없음
+      if (state.playerGrid[row][col] === 2) return state;
+      // 이미 채워진(1) 셀도 무시
+      if (state.playerGrid[row][col] === 1) return state;
+
+      const newGrid = cloneGrid(state.playerGrid);
       if (value === 1) {
         const expected = state.puzzle.solution[row][col];
-        if (expected === 0) return state;
+        if (expected === 0) {
+          // 틀림 — 라이프 감소 + X 표시
+          const newLives = Math.max(0, state.lives - 1);
+          newGrid[row][col] = 2;
+          if (newLives === 0) {
+            return { ...state, playerGrid: newGrid, lives: newLives, isGameOver: true, lostLife: true };
+          }
+          return { ...state, playerGrid: newGrid, lives: newLives, lostLife: true };
+        }
       }
-      const newGrid = cloneGrid(state.playerGrid);
       newGrid[row][col] = value;
       return { ...state, playerGrid: newGrid };
     }
@@ -220,6 +231,10 @@ function gameReducer(state, action) {
         isComplete, elapsedTime: isComplete ? Date.now() - state.startTime : state.elapsedTime,
         autoXCells: autoFilledCells, filledCorrect, mistakeFlashCells: [],
       };
+    }
+    case 'REVIVE': {
+      if (!state.isGameOver || state.usedRevive) return state;
+      return { ...state, lives: 1, isGameOver: false, usedRevive: true, lostLife: false };
     }
     case 'RESTART': {
       if (!state.puzzle) return state;
@@ -373,16 +388,19 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const baseFontSize = cellSize <= 20 ? 10 : cellSize <= 28 ? 12 : 14;
-    const smallFontSize = Math.max(8, baseFontSize - 3);
+    // Unified clue font size based on puzzle size (not clue count)
+    let clueFontSize;
+    if (size <= 5) clueFontSize = 12;
+    else if (size <= 8) clueFontSize = 11;
+    else if (size <= 10) clueFontSize = 10;
+    else clueFontSize = 9;
     const fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
-    const clueFont = `bold ${baseFontSize}px ${fontFamily}`;
-    const clueFontSmall = `bold ${smallFontSize}px ${fontFamily}`;
+    const clueFont = `bold ${clueFontSize}px ${fontFamily}`;
 
     puzzle.rowClues.forEach((clues, i) => {
       const complete = isRowComplete(puzzle.solution, playerGrid, i);
       const y = offsetY + i * cellSize + cellSize / 2;
-      ctx.font = clues.length > 3 ? clueFontSmall : clueFont;
+      ctx.font = clueFont;
       ctx.fillStyle = complete ? C.clueComplete : (i === hRow ? C.highlight : C.clueText);
       ctx.fillText(clues.join(' '), padding + clueWidth / 2, y);
     });
@@ -391,7 +409,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     puzzle.colClues.forEach((clues, j) => {
       const complete = isColComplete(puzzle.solution, playerGrid, j);
       const x = offsetX + j * cellSize + cellSize / 2;
-      ctx.font = clues.length > 3 ? clueFontSmall : clueFont;
+      ctx.font = clueFont;
       ctx.fillStyle = complete ? C.clueComplete : (j === hCol ? C.highlight : C.clueText);
       clues.forEach((clue, k) => {
         const y = padding + clueHeight - (clues.length - k) * colClueLineHeight + colClueLineHeight / 2;
@@ -746,49 +764,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     return () => wrapper.removeEventListener('touchend', handleDoubleTap);
   }, [needsZoom, applyTransform, clampOffset]);
 
-  const handleZoomIn = useCallback(() => {
-    const zoom = zoomRef.current;
-    const canvas = canvasRef.current;
-    const wrapper = wrapperRef.current;
-    if (!canvas || !wrapper) return;
-    const wRect = wrapper.getBoundingClientRect();
-    const centerX = wRect.width / 2;
-    const centerY = wRect.height / 2;
-    const canvasX = (centerX - zoom.offsetX) / zoom.scale;
-    const canvasY = (centerY - zoom.offsetY) / zoom.scale;
-    const newScale = Math.min(4, zoom.scale + 0.5);
-    zoom.scale = newScale;
-    zoom.offsetX = centerX - canvasX * newScale;
-    zoom.offsetY = centerY - canvasY * newScale;
-    clampOffset();
-    setZoomLevel(newScale);
-    applyTransform();
-  }, [clampOffset, applyTransform]);
-
-  const handleZoomOut = useCallback(() => {
-    const zoom = zoomRef.current;
-    const canvas = canvasRef.current;
-    const wrapper = wrapperRef.current;
-    if (!canvas || !wrapper) return;
-    const wRect = wrapper.getBoundingClientRect();
-    const centerX = wRect.width / 2;
-    const centerY = wRect.height / 2;
-    const canvasX = (centerX - zoom.offsetX) / zoom.scale;
-    const canvasY = (centerY - zoom.offsetY) / zoom.scale;
-    const newScale = Math.max(1, zoom.scale - 0.5);
-    zoom.scale = newScale;
-    if (newScale <= 1) {
-      zoom.offsetX = 0;
-      zoom.offsetY = 0;
-    } else {
-      zoom.offsetX = centerX - canvasX * newScale;
-      zoom.offsetY = centerY - canvasY * newScale;
-      clampOffset();
-    }
-    setZoomLevel(newScale);
-    applyTransform();
-  }, [clampOffset, applyTransform]);
-
   return (
     <div
       ref={wrapperRef}
@@ -803,12 +778,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       />
       {needsZoom && zoomLevel > 1.05 && (
         <div className="zoom-indicator">{Math.round(zoomLevel * 100)}%</div>
-      )}
-      {needsZoom && (
-        <div className="zoom-buttons">
-          <button className="zoom-btn" onClick={handleZoomIn} aria-label="확대">+</button>
-          <button className="zoom-btn" onClick={handleZoomOut} disabled={zoomLevel <= 1.05} aria-label="축소">−</button>
-        </div>
       )}
       {needsZoom && zoomLevel <= 1.05 && (
         <div className="zoom-hint">핀치로 확대 · 더블탭 줌인</div>
@@ -874,6 +843,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const handleRedo = useCallback(() => { dispatch({ type: 'REDO' }); }, []);
   const handleHint = useCallback(() => { if (onUseHint && onUseHint()) { playHint(); dispatch({ type: 'USE_HINT' }); } }, [onUseHint]);
   const handleRestart = useCallback(() => { wasCompleteRef.current = false; dispatch({ type: 'RESTART' }); }, []);
+  const handleRevive = useCallback(() => { dispatch({ type: 'REVIVE' }); }, []);
 
   if (!state.puzzle) return null;
 
@@ -992,6 +962,12 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
             <div className="modal-icon" style={{ fontSize: 56 }}>💔</div>
             <h2>게임 오버</h2>
             <p className="game-over-desc">라이프를 모두 소진했어요</p>
+            {!state.usedRevive && (
+              <button className="revive-btn" onClick={() => { alert('광고 시청 완료! ❤️ 부활!'); handleRevive(); }}>
+                <VideoIcon size={20} color="white" />
+                <span>광고 보고 계속하기</span>
+              </button>
+            )}
             <div className="modal-buttons">
               <button className="secondary-btn" onClick={onGoHome}>홈으로</button>
               <button className="primary-btn" onClick={handleRestart}>다시 시작</button>

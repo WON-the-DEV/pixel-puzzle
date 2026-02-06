@@ -410,7 +410,6 @@ body {
 }
 
 .level-btn {
-  aspect-ratio: 1;
   border: none;
   border-radius: var(--radius-md);
   background: var(--surface);
@@ -424,11 +423,12 @@ body {
   flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 1px;
+  gap: 2px;
   padding: 4px 2px;
   position: relative;
   min-width: 44px;
   min-height: 44px;
+  aspect-ratio: auto;
 }
 
 .level-btn-number {
@@ -474,17 +474,31 @@ body {
 }
 
 .level-btn.completed {
-  background: linear-gradient(135deg, var(--success), #059669);
-  color: white;
-  box-shadow: 0 2px 8px rgba(16, 185, 129, 0.25);
+  background: var(--surface);
+  color: var(--text);
+  box-shadow: var(--shadow-sm);
+  border: 1.5px solid var(--border-light);
+  padding: 5px 3px 3px;
 }
 
 .level-btn.completed .level-btn-time {
-  color: rgba(255, 255, 255, 0.8);
+  color: var(--text-tertiary);
+  font-size: 8px;
 }
 
 .level-btn.completed .level-btn-stars {
-  color: rgba(255, 255, 255, 0.9);
+  color: var(--text-secondary);
+}
+
+.level-btn-completed-info {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 0px;
+}
+
+.mini-puzzle-art {
+  border: 1px solid var(--border-light);
 }
 
 .level-btn.current {
@@ -641,9 +655,9 @@ body {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 12px;
+  padding: 6px 10px;
   background: var(--surface);
-  gap: 6px;
+  gap: 4px;
   position: relative;
 }
 
@@ -661,12 +675,12 @@ body {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 44px;
-  height: 44px;
+  width: 36px;
+  height: 36px;
   background: var(--bg);
   border: none;
   cursor: pointer;
-  border-radius: var(--radius-md);
+  border-radius: var(--radius-sm);
   color: var(--text);
   flex-shrink: 0;
   transition: all 0.15s;
@@ -687,7 +701,7 @@ body {
 }
 
 .level-number {
-  font-size: 15px;
+  font-size: 14px;
   font-weight: 700;
   white-space: nowrap;
 }
@@ -698,7 +712,7 @@ body {
 }
 
 .level-size {
-  font-size: 12px;
+  font-size: 11px;
   color: var(--text-tertiary);
   font-weight: 600;
 }
@@ -738,33 +752,33 @@ body {
 }
 
 .timer {
-  font-size: 14px;
+  font-size: 13px;
   font-weight: 600;
   color: var(--text-secondary);
   font-variant-numeric: tabular-nums;
 }
 
-/* Progress bar — improved design */
+/* Progress bar — compact */
 .progress-bar-container {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 6px 12px;
+  gap: 8px;
+  padding: 3px 12px 4px;
   background: var(--surface);
 }
 
 .progress-bar {
   flex: 1;
-  height: 8px;
+  height: 5px;
   background: var(--border-light);
-  border-radius: 4px;
+  border-radius: 3px;
   overflow: hidden;
 }
 
 .progress-fill {
   height: 100%;
   background: linear-gradient(90deg, var(--accent), #8B5CF6, var(--accent-dark));
-  border-radius: 4px;
+  border-radius: 3px;
   transition: width 0.3s cubic-bezier(0.16, 1, 0.3, 1);
   position: relative;
 }
@@ -777,14 +791,14 @@ body {
   bottom: 0;
   width: 12px;
   background: linear-gradient(90deg, transparent, rgba(255, 255, 255, 0.3));
-  border-radius: 0 4px 4px 0;
+  border-radius: 0 3px 3px 0;
 }
 
 .progress-text {
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-secondary);
-  min-width: 44px;
+  min-width: 40px;
   text-align: right;
   font-variant-numeric: tabular-nums;
 }
@@ -824,7 +838,7 @@ body {
   display: flex;
   justify-content: space-around;
   align-items: center;
-  padding: 6px 8px calc(10px + var(--safe-bottom));
+  padding: 4px 8px calc(6px + var(--safe-bottom));
   background: var(--surface);
   position: relative;
 }
@@ -843,8 +857,8 @@ body {
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 3px;
-  padding: 8px 12px;
+  gap: 2px;
+  padding: 6px 10px;
   background: none;
   border: none;
   cursor: pointer;
@@ -1151,6 +1165,31 @@ body {
   color: var(--text-secondary);
   margin: 8px 0 0;
   line-height: 1.5;
+}
+
+.revive-btn {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  width: 100%;
+  padding: 14px 20px;
+  margin-bottom: 10px;
+  background: linear-gradient(135deg, #10B981, #059669);
+  color: white;
+  border: none;
+  border-radius: var(--radius-lg);
+  font-size: 15px;
+  font-weight: 700;
+  cursor: pointer;
+  transition: all 0.2s;
+  box-shadow: 0 4px 16px rgba(16, 185, 129, 0.3);
+  min-height: 48px;
+}
+
+.revive-btn:active {
+  transform: scale(0.96);
+  filter: brightness(0.95);
 }
 
 .modal-buttons {
@@ -1866,46 +1905,6 @@ body {
 @keyframes zoomFadeIn {
   from { opacity: 0; transform: scale(0.9); }
   to { opacity: 1; transform: scale(1); }
-}
-
-.zoom-buttons {
-  position: absolute;
-  top: 8px;
-  left: 8px;
-  display: flex;
-  flex-direction: column;
-  gap: 4px;
-  z-index: 10;
-}
-
-.zoom-btn {
-  width: 36px;
-  height: 36px;
-  border: none;
-  border-radius: var(--radius-md);
-  background: var(--surface);
-  color: var(--text);
-  font-size: 20px;
-  font-weight: 700;
-  cursor: pointer;
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
-  transition: all 0.15s ease;
-  line-height: 1;
-  -webkit-tap-highlight-color: transparent;
-  touch-action: manipulation;
-}
-
-.zoom-btn:active:not(:disabled) {
-  transform: scale(0.9);
-  background: var(--bg);
-}
-
-.zoom-btn:disabled {
-  opacity: 0.3;
-  cursor: not-allowed;
 }
 
 /* ═══════════════════════════════════════

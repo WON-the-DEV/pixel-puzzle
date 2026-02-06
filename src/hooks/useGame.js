@@ -28,6 +28,8 @@ const INITIAL_STATE = {
   filledCorrect: 0,
   // 실수 플래시 셀 (빨간색으로 잠깐 표시 후 X로 변환)
   mistakeFlashCells: [],
+  // 광고 부활 사용 여부
+  usedRevive: false,
 };
 
 function cloneGrid(grid) {
@@ -84,6 +86,7 @@ function gameReducer(state, action) {
         autoXCells: [],
         filledCorrect: 0,
         mistakeFlashCells: [],
+        usedRevive: false,
       };
     }
 
@@ -157,25 +160,25 @@ function gameReducer(state, action) {
     case 'FILL_CELL': {
       if (state.isComplete || state.isGameOver) return state;
       const { row, col, value } = action;
-      const current = state.playerGrid[row][col];
-      if (current === value) return state;
-
-      // X 표시된 셀은 fill 모드에서 무시 (드래그 중에도)
-      if (value === 1 && current === 2) {
-        return state;
-      }
+      if (state.playerGrid[row][col] === value) return state;
+      // 이미 X(2)인 셀은 무시 — 추가 라이프 감소 없음
+      if (state.playerGrid[row][col] === 2) return state;
+      // 이미 채워진(1) 셀도 무시
+      if (state.playerGrid[row][col] === 1) return state;
 
       const newGrid = cloneGrid(state.playerGrid);
-
-      // 드래그 중 fill 모드에서 잘못된 셀 → 무시 (라이프 안 깎임)
       if (value === 1) {
         const expected = state.puzzle.solution[row][col];
         if (expected !== 1) {
-          // 드래그 중에는 틀린 셀 건너뜀
-          return state;
+          // 틀림 — 라이프 감소 + X 표시
+          const newLives = Math.max(0, state.lives - 1);
+          newGrid[row][col] = 2;
+          if (newLives === 0) {
+            return { ...state, playerGrid: newGrid, lives: newLives, isGameOver: true, lostLife: true };
+          }
+          return { ...state, playerGrid: newGrid, lives: newLives, lostLife: true };
         }
       }
-
       newGrid[row][col] = value;
       return { ...state, playerGrid: newGrid };
     }
@@ -273,6 +276,11 @@ function gameReducer(state, action) {
     case 'CLEAR_AUTO_X':
       return { ...state, autoXCells: [], lostLife: false, mistakeFlashCells: [] };
 
+    case 'REVIVE': {
+      if (!state.isGameOver || state.usedRevive) return state;
+      return { ...state, lives: 1, isGameOver: false, usedRevive: true, lostLife: false };
+    }
+
     case 'RESTART_LEVEL': {
       const puzzle = state.puzzle;
       if (!puzzle) return state;
@@ -305,6 +313,7 @@ function gameReducer(state, action) {
         autoXCells: [],
         filledCorrect: 0,
         mistakeFlashCells: [],
+        usedRevive: false,
       };
     }
 
@@ -356,6 +365,10 @@ export function useGame() {
     dispatch({ type: 'RESTART_LEVEL' });
   }, []);
 
+  const revive = useCallback(() => {
+    dispatch({ type: 'REVIVE' });
+  }, []);
+
   return {
     state,
     startLevel,
@@ -368,5 +381,6 @@ export function useGame() {
     useHint,
     clearAutoX,
     restartLevel,
+    revive,
   };
 }

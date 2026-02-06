@@ -190,17 +190,20 @@ export default function GameCanvas({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    const baseFontSize = cellSize <= 20 ? 10 : cellSize <= 28 ? 12 : 14;
-    const smallFontSize = Math.max(8, baseFontSize - 3);
+    // Unified clue font size based on puzzle size (not clue count)
+    let clueFontSize;
+    if (size <= 5) clueFontSize = 12;
+    else if (size <= 8) clueFontSize = 11;
+    else if (size <= 10) clueFontSize = 10;
+    else clueFontSize = 9;
     const fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
-    const clueFont = `bold ${baseFontSize}px ${fontFamily}`;
-    const clueFontSmall = `bold ${smallFontSize}px ${fontFamily}`;
+    const clueFont = `bold ${clueFontSize}px ${fontFamily}`;
 
     // Row clues (left side)
     puzzle.rowClues.forEach((clues, i) => {
       const complete = isRowComplete(puzzle.rowClues, playerGrid, i);
       const y = offsetY + i * cellSize + cellSize / 2;
-      ctx.font = clues.length > 3 ? clueFontSmall : clueFont;
+      ctx.font = clueFont;
       ctx.fillStyle = complete ? COLORS.clueComplete : (i === hRow ? COLORS.highlight : COLORS.clueText);
       if (complete && i === hRow) ctx.fillStyle = COLORS.clueComplete;
       ctx.fillText(clues.join(' '), padding + clueWidth / 2, y);
@@ -211,7 +214,7 @@ export default function GameCanvas({
     puzzle.colClues.forEach((clues, j) => {
       const complete = isColComplete(puzzle.colClues, playerGrid, j);
       const x = offsetX + j * cellSize + cellSize / 2;
-      ctx.font = clues.length > 3 ? clueFontSmall : clueFont;
+      ctx.font = clueFont;
       const baseColor = complete ? COLORS.clueComplete : (j === hCol ? COLORS.highlight : COLORS.clueText);
       ctx.fillStyle = complete && j === hCol ? COLORS.clueComplete : baseColor;
       clues.forEach((clue, k) => {
@@ -691,49 +694,6 @@ export default function GameCanvas({
     return () => wrapper.removeEventListener('touchend', handleDoubleTap);
   }, [needsZoom, applyTransform, clampOffset]);
 
-  const handleZoomIn = useCallback(() => {
-    const zoom = zoomRef.current;
-    const canvas = canvasRef.current;
-    const wrapper = wrapperRef.current;
-    if (!canvas || !wrapper) return;
-    const wRect = wrapper.getBoundingClientRect();
-    const centerX = wRect.width / 2;
-    const centerY = wRect.height / 2;
-    const canvasX = (centerX - zoom.offsetX) / zoom.scale;
-    const canvasY = (centerY - zoom.offsetY) / zoom.scale;
-    const newScale = Math.min(4, zoom.scale + 0.5);
-    zoom.scale = newScale;
-    zoom.offsetX = centerX - canvasX * newScale;
-    zoom.offsetY = centerY - canvasY * newScale;
-    clampOffset();
-    setZoomLevel(newScale);
-    applyTransform();
-  }, [clampOffset, applyTransform]);
-
-  const handleZoomOut = useCallback(() => {
-    const zoom = zoomRef.current;
-    const canvas = canvasRef.current;
-    const wrapper = wrapperRef.current;
-    if (!canvas || !wrapper) return;
-    const wRect = wrapper.getBoundingClientRect();
-    const centerX = wRect.width / 2;
-    const centerY = wRect.height / 2;
-    const canvasX = (centerX - zoom.offsetX) / zoom.scale;
-    const canvasY = (centerY - zoom.offsetY) / zoom.scale;
-    const newScale = Math.max(1, zoom.scale - 0.5);
-    zoom.scale = newScale;
-    if (newScale <= 1) {
-      zoom.offsetX = 0;
-      zoom.offsetY = 0;
-    } else {
-      zoom.offsetX = centerX - canvasX * newScale;
-      zoom.offsetY = centerY - canvasY * newScale;
-      clampOffset();
-    }
-    setZoomLevel(newScale);
-    applyTransform();
-  }, [clampOffset, applyTransform]);
-
   return (
     <div
       ref={wrapperRef}
@@ -752,12 +712,6 @@ export default function GameCanvas({
       />
       {needsZoom && zoomLevel > 1.05 && (
         <div className="zoom-indicator">{Math.round(zoomLevel * 100)}%</div>
-      )}
-      {needsZoom && (
-        <div className="zoom-buttons">
-          <button className="zoom-btn" onClick={handleZoomIn} aria-label="확대">+</button>
-          <button className="zoom-btn" onClick={handleZoomOut} disabled={zoomLevel <= 1.05} aria-label="축소">−</button>
-        </div>
       )}
       {needsZoom && zoomLevel <= 1.05 && (
         <div className="zoom-hint">핀치로 확대 · 더블탭 줌인</div>

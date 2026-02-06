@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef, memo } from 'react';
 import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel } from '../lib/puzzle.js';
 import CollectionView from './CollectionView.jsx';
 import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, SettingsIcon, GridIcon, VideoIcon, DiamondIcon, DifficultyBadge } from './icons/Icons.jsx';
@@ -17,16 +17,65 @@ function formatTime(ms) {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
-function StarsDisplay({ stars }) {
+function StarsDisplay({ stars, small }) {
   if (!stars) return null;
+  const iconSize = small ? 7 : 8;
   return (
     <span className="level-btn-stars">
       {[1, 2, 3].map((i) => (
-        <StarIcon key={i} size={8} filled={i <= stars} color={i <= stars ? '#FCD34D' : 'rgba(255,255,255,0.4)'} />
+        <StarIcon key={i} size={iconSize} filled={i <= stars} color={i <= stars ? '#FCD34D' : 'rgba(255,255,255,0.4)'} />
       ))}
     </span>
   );
 }
+
+// Cache for puzzle solutions to avoid re-generating on every render
+const puzzleCache = {};
+function getCachedSolution(level) {
+  if (!puzzleCache[level]) {
+    puzzleCache[level] = createPuzzleForLevel(level);
+  }
+  return puzzleCache[level];
+}
+
+// Mini pixel art display for completed levels
+const MiniPuzzleArt = memo(function MiniPuzzleArt({ level, sectionColor }) {
+  const puzzle = getCachedSolution(level);
+  if (!puzzle) return null;
+  const { size, solution } = puzzle;
+  // Calculate cell size to fit ~48px total
+  const totalSize = 44;
+  const cellPx = Math.floor(totalSize / size);
+  const actualSize = cellPx * size;
+
+  return (
+    <div
+      className="mini-puzzle-art"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${size}, ${cellPx}px)`,
+        gridTemplateRows: `repeat(${size}, ${cellPx}px)`,
+        width: actualSize,
+        height: actualSize,
+        borderRadius: 4,
+        overflow: 'hidden',
+      }}
+    >
+      {solution.map((row, i) =>
+        row.map((cell, j) => (
+          <div
+            key={`${i}-${j}`}
+            style={{
+              width: cellPx,
+              height: cellPx,
+              background: cell === 1 ? sectionColor : 'transparent',
+            }}
+          />
+        ))
+      )}
+    </div>
+  );
+});
 
 export default function HomeScreen({ appState, collectionProgress, onStartLevel, onOpenSettings, onWatchAd, onBuyHints, onStartCollectionTile, activeTab: externalTab, onTabChange, savedScrollY, onScrollChange }) {
   const { completedLevels = [], currentLevel = 1, bestTimes = {}, bestStars = {}, hints = 3 } = appState;
@@ -169,20 +218,22 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
                         onClick={() => onStartLevel(level)}
                         title={presetName ? `${presetName}` : `Level ${level}`}
                       >
-                        <span className="level-btn-number">
-                          {isLocked ? (
-                            <LockIcon size={14} color="var(--text-tertiary)" />
-                          ) : isCompleted ? (
-                            <CheckIcon size={14} color="white" />
-                          ) : (
-                            level
-                          )}
-                        </span>
-                        {isCompleted && bestTime && (
-                          <span className="level-btn-time">{formatTime(bestTime)}</span>
-                        )}
-                        {isCompleted && levelStars && (
-                          <StarsDisplay stars={levelStars} />
+                        {isCompleted ? (
+                          <>
+                            <MiniPuzzleArt level={level} sectionColor={section.colorRaw} />
+                            <div className="level-btn-completed-info">
+                              {levelStars && <StarsDisplay stars={levelStars} small />}
+                              {bestTime && <span className="level-btn-time">{formatTime(bestTime)}</span>}
+                            </div>
+                          </>
+                        ) : (
+                          <span className="level-btn-number">
+                            {isLocked ? (
+                              <LockIcon size={14} color="var(--text-tertiary)" />
+                            ) : (
+                              level
+                            )}
+                          </span>
                         )}
                       </button>
                     );
