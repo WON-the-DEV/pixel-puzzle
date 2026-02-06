@@ -776,26 +776,26 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
       {/* Controls */}
       {controllerMode ? (
         <footer className="controls controller-controls">
-          <div className="controller-controls-row">
-            <button className="control-btn" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
-              <span className="icon"><LightbulbIcon size={24} color="var(--text)" /></span>
-              <span className="label">힌트</span>
-              {hints > 0 && <span className="count">{hints}</span>}
+          <div className="controller-top-bar">
+            <button className="control-btn-sm" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
+              <LightbulbIcon size={18} color="var(--text)" />
+              <span>힌트</span>
+              {hints > 0 && <span className="count-sm">{hints}</span>}
             </button>
-            <ControllerPad
-              onMove={handleControllerMove}
-              onFill={handleControllerFill}
-              onMark={handleControllerMark}
-            />
             <button
-              className="control-btn mode-switch-btn"
+              className="control-btn-sm"
               onClick={() => setControllerMode(false)}
               aria-label="터치 모드로 전환"
             >
-              <span className="icon"><TouchIcon size={24} color="var(--text)" /></span>
-              <span className="label">터치</span>
+              <TouchIcon size={18} color="var(--text)" />
+              <span>터치</span>
             </button>
           </div>
+          <ControllerPad
+            onMove={handleControllerMove}
+            onFill={handleControllerFill}
+            onMark={handleControllerMark}
+          />
         </footer>
       ) : (
         <footer className="controls">

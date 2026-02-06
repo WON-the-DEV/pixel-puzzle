@@ -31,45 +31,11 @@ function ArrowRight({ size = 24, color = 'currentColor' }) {
   );
 }
 
-const REPEAT_DELAY = 400; // ms before repeat starts
-const REPEAT_INTERVAL = 120; // ms between repeats
+const REPEAT_DELAY = 400;
+const REPEAT_INTERVAL = 120;
 
 export default function ControllerPad({ onMove, onFill, onMark }) {
   const repeatRef = useRef(null);
-
-  const startRepeat = useCallback((action) => {
-    // Execute once immediately
-    action();
-    // After delay, start repeating
-    const delayTimer = setTimeout(() => {
-      repeatRef.current = setInterval(action, REPEAT_INTERVAL);
-    }, REPEAT_DELAY);
-    repeatRef.current = delayTimer;
-    // Store the actual type to clean up
-    repeatRef.current = { delayTimer, intervalTimer: null };
-    repeatRef.current.delayTimer = delayTimer;
-    // Set up the interval after delay
-    clearTimeout(repeatRef.current?.delayTimer);
-    repeatRef.current = null;
-
-    // Simplified repeat logic
-    let intervalId = null;
-    const delayId = setTimeout(() => {
-      intervalId = setInterval(action, REPEAT_INTERVAL);
-    }, REPEAT_DELAY);
-
-    repeatRef.current = { delayId, get intervalId() { return intervalId; }, set intervalId(v) { intervalId = v; } };
-  }, []);
-
-  const stopRepeat = useCallback(() => {
-    if (repeatRef.current) {
-      clearTimeout(repeatRef.current.delayId);
-      if (repeatRef.current.intervalId) {
-        clearInterval(repeatRef.current.intervalId);
-      }
-      repeatRef.current = null;
-    }
-  }, []);
 
   const handleDirStart = useCallback((dir) => {
     const action = () => onMove(dir);
@@ -80,19 +46,9 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
       intervalId = setInterval(action, REPEAT_INTERVAL);
     }, REPEAT_DELAY);
 
-    repeatRef.current = { delayId, intervalId: null };
-    // Update intervalId ref after it's created
-    const checkInterval = setInterval(() => {
-      if (intervalId) {
-        if (repeatRef.current) repeatRef.current._intervalId = intervalId;
-        clearInterval(checkInterval);
-      }
-    }, 50);
-
     repeatRef.current = {
       stop: () => {
         clearTimeout(delayId);
-        clearInterval(checkInterval);
         if (intervalId) clearInterval(intervalId);
       }
     };
@@ -116,34 +72,47 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
 
   return (
     <div className="controller-pad">
-      <div className="controller-dpad">
-        <div className="dpad-row">
-          <div className="dpad-spacer" />
-          <button className="dpad-btn dpad-up" {...dirProps('up')} aria-label="위">
+      <div className="controller-left">
+        {/* 십자키 3x3 그리드 */}
+        <div className="dpad-grid">
+          <div />
+          <button className="dpad-btn" {...dirProps('up')} aria-label="위">
             <ArrowUp size={22} color="var(--text)" />
           </button>
-          <div className="dpad-spacer" />
-        </div>
-        <div className="dpad-row">
-          <button className="dpad-btn dpad-left" {...dirProps('left')} aria-label="왼쪽">
+          <div />
+          <button className="dpad-btn" {...dirProps('left')} aria-label="왼쪽">
             <ArrowLeft size={22} color="var(--text)" />
           </button>
-          <button className="dpad-btn dpad-center dpad-fill" onTouchStart={(e) => { e.preventDefault(); onFill(); }} onClick={onFill} aria-label="채우기">
-            <PencilIcon size={20} color="var(--accent)" />
-          </button>
-          <button className="dpad-btn dpad-right" {...dirProps('right')} aria-label="오른쪽">
+          <div className="dpad-center-dot" />
+          <button className="dpad-btn" {...dirProps('right')} aria-label="오른쪽">
             <ArrowRight size={22} color="var(--text)" />
           </button>
-        </div>
-        <div className="dpad-row">
-          <div className="dpad-spacer" />
-          <button className="dpad-btn dpad-down" {...dirProps('down')} aria-label="아래">
+          <div />
+          <button className="dpad-btn" {...dirProps('down')} aria-label="아래">
             <ArrowDown size={22} color="var(--text)" />
           </button>
-          <button className="dpad-btn dpad-mark" onTouchStart={(e) => { e.preventDefault(); onMark(); }} onClick={onMark} aria-label="X표시">
-            <XMarkIcon size={20} color="var(--danger)" />
-          </button>
+          <div />
         </div>
+      </div>
+      <div className="controller-right">
+        <button
+          className="action-btn action-fill"
+          onTouchStart={(e) => { e.preventDefault(); onFill(); }}
+          onClick={onFill}
+          aria-label="채우기"
+        >
+          <PencilIcon size={20} color="var(--accent)" />
+          <span className="action-btn-label">채우기</span>
+        </button>
+        <button
+          className="action-btn action-mark"
+          onTouchStart={(e) => { e.preventDefault(); onMark(); }}
+          onClick={onMark}
+          aria-label="X표시"
+        >
+          <XMarkIcon size={20} color="var(--danger)" />
+          <span className="action-btn-label">X표시</span>
+        </button>
       </div>
     </div>
   );
