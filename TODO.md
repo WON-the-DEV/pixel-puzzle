@@ -76,6 +76,38 @@
 - [x] **단서 텍스트 크기 통일** — 퍼즐 크기 기준 고정 (5×5:12px, 8×8:11px, 10×10:10px, 15×15:9px)
 - [x] **완료 레벨 미니 퍼즐 아트** — 레벨 목록에서 완료 레벨은 solution 미니 그리드 + 별 + 시간 표시
 
+## ✅ UX 대개편 (v3.3 - 2026-02-07)
+
+### 핀치줌/더블탭 완전 제거
+- [x] GameCanvas.jsx — zoomRef, zoomLevel, lastTapRef, needsZoom 관련 코드 전부 삭제
+- [x] handleWrapperTouchStart/Move/End, getTouchDist, applyTransform 삭제
+- [x] wrapper의 onTouchStart/Move/End 핸들러 및 .zoomable 클래스 제거
+- [x] zoom-indicator, zoom-hint JSX 제거
+- [x] CollectionGameScreen MonoCanvas에서도 동일하게 제거
+- [x] CSS에서 .zoomable, .zoom-indicator, .zoom-hint 스타일 삭제
+
+### 실행취소/다시실행 버튼 제거
+- [x] GameScreen.jsx — Undo, Redo 버튼 JSX 삭제, 관련 import 정리
+- [x] CollectionGameScreen.jsx — 동일하게 Undo, Redo 버튼 삭제
+- [x] useGame.js — export에서 undo, redo 제거 (reducer는 유지)
+- [x] App.jsx — onUndo, onRedo props 제거
+
+### 컨트롤러 모드 구현
+- [x] ControllerPad.jsx 컴포넌트 생성 (십자키 + 채우기/X 버튼)
+- [x] 길게 누르면 연속 이동 (400ms delay → 120ms interval)
+- [x] GameCanvas에 cursor 표시 (빨간 테두리 + 하이라이트 배경)
+- [x] 컨트롤러 모드에서 캔버스 터치 비활성화
+- [x] 터치/컨트롤러 모드 전환 토글 버튼 (하단)
+- [x] GameScreen과 CollectionGameScreen 모두 적용
+- [x] TouchIcon, ControllerIcon SVG 아이콘 추가
+
+### 퍼즐 목록 아코디언 UI
+- [x] 섹션 헤더 탭 → 접기/펼치기 토글
+- [x] 완료된 섹션 기본 접힘, 진행 중인 섹션 기본 펼침
+- [x] 섹션별 진행률 표시 (완료/전체)
+- [x] 화살표(chevron) 아이콘으로 상태 표시
+- [x] 부드러운 애니메이션 (max-height transition)
+
 ## 📋 향후 TODO
 
 ### 기능
