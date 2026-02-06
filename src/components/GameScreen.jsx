@@ -5,7 +5,6 @@ import GameOverModal from './GameOverModal.jsx';
 import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint, playLifeLost, playGameOver, playAutoX } from '../lib/sound.js';
 import { hapticFill, hapticLineComplete, hapticPuzzleComplete, hapticLifeLost, hapticGameOver, hapticAutoX } from '../lib/haptic.js';
 import { isRowComplete, isColComplete, calculateStars } from '../lib/puzzle.js';
-import { loadSettings } from '../lib/settings.js';
 import { BackIcon, HeartIcon, LightbulbIcon, UndoIcon, RedoIcon, PencilIcon, XMarkIcon } from './icons/Icons.jsx';
 
 function formatTime(ms) {
@@ -29,14 +28,13 @@ export default function GameScreen({
   onRestartLevel,
   hints,
 }) {
-  const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife } = gameState;
+  const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife, mistakeFlashCells } = gameState;
   const [displayTime, setDisplayTime] = useState('00:00');
   const timerRef = useRef(null);
   const prevCompleteRowsRef = useRef(new Set());
   const prevCompleteColsRef = useRef(new Set());
   const wasCompleteRef = useRef(false);
   const wasGameOverRef = useRef(false);
-  const settings = loadSettings();
 
   // Timer
   useEffect(() => {
@@ -207,8 +205,8 @@ export default function GameScreen({
           onFillCell={onFillCell}
           onEndDrag={onEndDrag}
           isComplete={isComplete}
-          showMistakes={settings.showMistakes}
           autoXCells={autoXCells}
+          mistakeFlashCells={mistakeFlashCells}
         />
       </main>
 

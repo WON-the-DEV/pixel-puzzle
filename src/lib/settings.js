@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS = {
   sound: true,
   haptic: true,
   darkMode: false,
-  showMistakes: false,
+  // showMistakes removed — always on as default behavior
 };
 
 export function loadSettings() {

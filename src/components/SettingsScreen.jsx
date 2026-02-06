@@ -90,20 +90,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll 
               </div>
             </div>
 
-            <div className="settings-item" onClick={() => toggle('showMistakes')}>
-              <div className="settings-item-left">
-                <span className="settings-item-icon">
-                  <EyeIcon size={20} color="var(--accent)" />
-                </span>
-                <div className="settings-item-text">
-                  <span className="settings-item-label">실수 표시</span>
-                  <span className="settings-item-desc">틀린 셀을 빨간색으로 표시</span>
-                </div>
-              </div>
-              <div className={`settings-toggle ${settings.showMistakes ? 'on' : ''}`}>
-                <div className="settings-toggle-knob" />
-              </div>
-            </div>
+            {/* 실수 표시는 항상 켜짐 (기본 동작) — 토글 제거됨 */}
           </div>
         </div>
 

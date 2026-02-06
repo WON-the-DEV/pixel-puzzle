@@ -7,7 +7,7 @@ import {
   getFilledCorrectCount,
 } from '../lib/puzzle.js';
 
-// 0 = empty, 1 = filled, 2 = X mark
+// 0 = empty, 1 = filled, 2 = X mark, 3 = mistake flash (temporary)
 const INITIAL_STATE = {
   level: 1,
   puzzle: null, // { size, solution, rowClues, colClues, name, totalFilled }
@@ -26,6 +26,8 @@ const INITIAL_STATE = {
   autoXCells: [],
   // 진행률
   filledCorrect: 0,
+  // 실수 플래시 셀 (빨간색으로 잠깐 표시 후 X로 변환)
+  mistakeFlashCells: [],
 };
 
 function cloneGrid(grid) {
@@ -52,6 +54,19 @@ function gameReducer(state, action) {
       const level = action.level;
       const puzzle = createPuzzleForLevel(level);
       const playerGrid = createEmptyGrid(puzzle.size);
+
+      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
+      for (let i = 0; i < puzzle.size; i++) {
+        if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
+          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
+        }
+      }
+      for (let j = 0; j < puzzle.size; j++) {
+        if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
+          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
+        }
+      }
+
       return {
         ...state,
         level,
@@ -68,6 +83,7 @@ function gameReducer(state, action) {
         isGameOver: false,
         autoXCells: [],
         filledCorrect: 0,
+        mistakeFlashCells: [],
       };
     }
 
@@ -80,8 +96,13 @@ function gameReducer(state, action) {
       let newLives = state.lives;
       let isGameOver = false;
       let lostLife = false;
+      let mistakeFlashCells = [];
 
       if (state.mode === 'fill') {
+        // X 표시된 셀은 fill 모드에서 무시 (목숨 보호)
+        if (current === 2) {
+          return state;
+        }
         if (current === 1) {
           // 이미 채워진 셀 해제
           newGrid[row][col] = 0;
@@ -97,11 +118,13 @@ function gameReducer(state, action) {
             if (newLives === 0) {
               isGameOver = true;
             }
-            // 잘못 채운 셀은 X로 표시 (자동 교정)
+            // 실수 플래시: 잠깐 빨간색으로 표시 후 X로 변환
             newGrid[row][col] = 2;
+            mistakeFlashCells = [{ row, col }];
           }
         }
       } else {
+        // X 모드: X 토글
         newGrid[row][col] = current === 2 ? 0 : 2;
       }
 
@@ -127,13 +150,20 @@ function gameReducer(state, action) {
         lostLife,
         autoXCells: autoFilledCells,
         filledCorrect,
+        mistakeFlashCells,
       };
     }
 
     case 'FILL_CELL': {
       if (state.isComplete || state.isGameOver) return state;
       const { row, col, value } = action;
-      if (state.playerGrid[row][col] === value) return state;
+      const current = state.playerGrid[row][col];
+      if (current === value) return state;
+
+      // X 표시된 셀은 fill 모드에서 무시 (드래그 중에도)
+      if (value === 1 && current === 2) {
+        return state;
+      }
 
       const newGrid = cloneGrid(state.playerGrid);
 
@@ -189,6 +219,7 @@ function gameReducer(state, action) {
         historyIndex: newIndex,
         autoXCells: [],
         filledCorrect,
+        mistakeFlashCells: [],
       };
     }
 
@@ -203,6 +234,7 @@ function gameReducer(state, action) {
         historyIndex: newIndex,
         autoXCells: [],
         filledCorrect,
+        mistakeFlashCells: [],
       };
     }
 
@@ -234,16 +266,30 @@ function gameReducer(state, action) {
         elapsedTime: isComplete ? Date.now() - state.startTime : state.elapsedTime,
         autoXCells: autoFilledCells,
         filledCorrect,
+        mistakeFlashCells: [],
       };
     }
 
     case 'CLEAR_AUTO_X':
-      return { ...state, autoXCells: [], lostLife: false };
+      return { ...state, autoXCells: [], lostLife: false, mistakeFlashCells: [] };
 
     case 'RESTART_LEVEL': {
       const puzzle = state.puzzle;
       if (!puzzle) return state;
       const playerGrid = createEmptyGrid(puzzle.size);
+
+      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
+      for (let i = 0; i < puzzle.size; i++) {
+        if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
+          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
+        }
+      }
+      for (let j = 0; j < puzzle.size; j++) {
+        if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
+          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
+        }
+      }
+
       return {
         ...state,
         playerGrid,
@@ -258,6 +304,7 @@ function gameReducer(state, action) {
         isGameOver: false,
         autoXCells: [],
         filledCorrect: 0,
+        mistakeFlashCells: [],
       };
     }
 

@@ -2,7 +2,6 @@ import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { COLLECTION_DATA, createCollectionPuzzle, checkMonoSolution } from '../lib/collections.js';
 import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint, playLifeLost, playGameOver, playAutoX } from '../lib/sound.js';
 import { hapticFill, hapticLineComplete, hapticPuzzleComplete, hapticLifeLost, hapticGameOver } from '../lib/haptic.js';
-import { loadSettings } from '../lib/settings.js';
 import { BackIcon, HeartIcon, LightbulbIcon, UndoIcon, RedoIcon, PencilIcon, XMarkIcon } from './icons/Icons.jsx';
 
 function formatTime(ms) {
@@ -16,7 +15,6 @@ function formatTime(ms) {
 function cloneGrid(grid) { return grid.map(r => [...r]); }
 function createEmptyGrid(size) { return Array(size).fill(null).map(() => Array(size).fill(0)); }
 
-// 단색 기준: solution[i][j] > 0이면 채워야 할 셀, playerGrid에서 1 = 채움
 function isRowComplete(solution, playerGrid, rowIdx) {
   for (let j = 0; j < solution[rowIdx].length; j++) {
     if (solution[rowIdx][j] > 0 && playerGrid[rowIdx][j] !== 1) return false;
@@ -44,7 +42,7 @@ function autoFillCompleted(solution, playerGrid) {
       if (isRowComplete(solution, grid, i)) {
         for (let j = 0; j < size; j++) {
           if (solution[i][j] === 0 && grid[i][j] === 0) {
-            grid[i][j] = 2; // X mark
+            grid[i][j] = 2;
             autoFilledCells.push({ row: i, col: j });
             changed = true;
           }
@@ -92,6 +90,7 @@ const INITIAL_STATE = {
   startTime: null, elapsedTime: 0,
   isComplete: false, lives: 3, maxLives: 3,
   isGameOver: false, autoXCells: [], filledCorrect: 0, lostLife: false,
+  mistakeFlashCells: [],
 };
 
 function gameReducer(state, action) {
@@ -99,6 +98,19 @@ function gameReducer(state, action) {
     case 'START': {
       const { puzzle } = action;
       const playerGrid = createEmptyGrid(puzzle.size);
+
+      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
+      for (let i = 0; i < puzzle.size; i++) {
+        if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
+          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
+        }
+      }
+      for (let j = 0; j < puzzle.size; j++) {
+        if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
+          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
+        }
+      }
+
       return { ...INITIAL_STATE, puzzle, playerGrid, history: [cloneGrid(playerGrid)], historyIndex: 0, startTime: Date.now() };
     }
     case 'TOGGLE_MODE':
@@ -111,24 +123,28 @@ function gameReducer(state, action) {
       let newLives = state.lives;
       let isGameOver = false;
       let lostLife = false;
+      let mistakeFlashCells = [];
 
       if (state.mode === 'fill') {
+        // X 표시된 셀은 fill 모드에서 무시 (목숨 보호)
+        if (current === 2) {
+          return state;
+        }
         if (current === 1) {
-          newGrid[row][col] = 0; // unfill
+          newGrid[row][col] = 0;
         } else {
           const expected = state.puzzle.solution[row][col];
           if (expected > 0) {
-            newGrid[row][col] = 1; // correct fill
+            newGrid[row][col] = 1;
           } else {
-            // wrong — lose life, auto X
             newLives = Math.max(0, state.lives - 1);
             lostLife = true;
             if (newLives === 0) isGameOver = true;
-            newGrid[row][col] = 2; // auto X
+            newGrid[row][col] = 2;
+            mistakeFlashCells = [{ row, col }];
           }
         }
       } else {
-        // X mode
         newGrid[row][col] = current === 2 ? 0 : 2;
       }
 
@@ -143,16 +159,19 @@ function gameReducer(state, action) {
         ...state, playerGrid: autoGrid, history: newHistory, historyIndex: newHistory.length - 1,
         isComplete, elapsedTime: isComplete ? Date.now() - state.startTime : state.elapsedTime,
         lives: newLives, isGameOver, lostLife, autoXCells: autoFilledCells, filledCorrect,
+        mistakeFlashCells,
       };
     }
     case 'FILL_CELL': {
-      // 드래그 중 호출 — 틀린 셀은 무시 (라이프 안 깎임)
       if (state.isComplete || state.isGameOver) return state;
       const { row, col, value } = action;
-      if (state.playerGrid[row][col] === value) return state;
+      const current = state.playerGrid[row][col];
+      if (current === value) return state;
+      // X 표시된 셀은 fill 모드에서 무시 (드래그 중에도)
+      if (value === 1 && current === 2) return state;
       if (value === 1) {
         const expected = state.puzzle.solution[row][col];
-        if (expected === 0) return state; // 드래그 중 틀린 셀 건너뜀
+        if (expected === 0) return state;
       }
       const newGrid = cloneGrid(state.playerGrid);
       newGrid[row][col] = value;
@@ -176,13 +195,13 @@ function gameReducer(state, action) {
       if (state.historyIndex <= 0 || state.isGameOver) return state;
       const idx = state.historyIndex - 1;
       const grid = cloneGrid(state.history[idx]);
-      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid) };
+      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid), mistakeFlashCells: [] };
     }
     case 'REDO': {
       if (state.historyIndex >= state.history.length - 1 || state.isGameOver) return state;
       const idx = state.historyIndex + 1;
       const grid = cloneGrid(state.history[idx]);
-      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid) };
+      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid), mistakeFlashCells: [] };
     }
     case 'USE_HINT': {
       if (state.isComplete || state.isGameOver) return state;
@@ -199,27 +218,52 @@ function gameReducer(state, action) {
       return {
         ...state, playerGrid: autoGrid, history: newHistory, historyIndex: newHistory.length - 1,
         isComplete, elapsedTime: isComplete ? Date.now() - state.startTime : state.elapsedTime,
-        autoXCells: autoFilledCells, filledCorrect,
+        autoXCells: autoFilledCells, filledCorrect, mistakeFlashCells: [],
       };
     }
     case 'RESTART': {
       if (!state.puzzle) return state;
-      const playerGrid = createEmptyGrid(state.puzzle.size);
-      return { ...INITIAL_STATE, puzzle: state.puzzle, playerGrid, history: [cloneGrid(playerGrid)], historyIndex: 0, startTime: Date.now() };
+      const puzzle = state.puzzle;
+      const playerGrid = createEmptyGrid(puzzle.size);
+
+      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
+      for (let i = 0; i < puzzle.size; i++) {
+        if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
+          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
+        }
+      }
+      for (let j = 0; j < puzzle.size; j++) {
+        if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
+          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
+        }
+      }
+
+      return { ...INITIAL_STATE, puzzle, playerGrid, history: [cloneGrid(playerGrid)], historyIndex: 0, startTime: Date.now() };
     }
     default: return state;
   }
 }
 
-// ── Canvas (단색, 일반 GameCanvas와 동일 로직) ──
-function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, showMistakes, autoXCells }) {
+// ── Canvas (단색, MonoCanvas with same improvements as GameCanvas) ──
+function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, autoXCells, mistakeFlashCells }) {
   const canvasRef = useRef(null);
+  const wrapperRef = useRef(null);
   const interactionRef = useRef({ isDown: false, isDragging: false, dragValue: null, startCell: null, startX: 0, startY: 0 });
   const highlightRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
+  const mistakeFlashAnimRef = useRef(new Set());
 
   const DRAG_THRESHOLD = 8;
+
+  const zoomRef = useRef({
+    scale: 1, offsetX: 0, offsetY: 0,
+    isPinching: false, startDist: 0, startScale: 1,
+    startMidX: 0, startMidY: 0, startOffsetX: 0, startOffsetY: 0,
+    isPanning: false, panStartX: 0, panStartY: 0, panStartOffsetX: 0, panStartOffsetY: 0,
+  });
+  const [zoomLevel, setZoomLevel] = useState(1);
+  const needsZoom = puzzle && puzzle.size >= 10;
 
   useEffect(() => {
     if (autoXCells && autoXCells.length > 0) {
@@ -229,18 +273,48 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     }
   }, [autoXCells]);
 
+  useEffect(() => {
+    if (mistakeFlashCells && mistakeFlashCells.length > 0) {
+      mistakeFlashAnimRef.current = new Set(mistakeFlashCells.map(c => `${c.row}-${c.col}`));
+      const timer = setTimeout(() => {
+        mistakeFlashAnimRef.current = new Set();
+        requestAnimationFrame(() => render());
+      }, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [mistakeFlashCells]);
+
   const getLayout = useCallback(() => {
     if (!puzzle) return null;
     const size = puzzle.size;
-    const maxWidth = Math.min(window.innerWidth - 32, 468);
-    const maxClueWidth = size <= 5 ? 50 : size <= 10 ? 60 : 70;
-    const maxClueHeight = size <= 5 ? 50 : size <= 10 ? 60 : 70;
-    const availableWidth = maxWidth - maxClueWidth - 16;
+    const screenWidth = window.innerWidth;
+    const maxWidth = Math.min(screenWidth - 16, 500);
+
+    const maxRowClueLen = Math.max(...puzzle.rowClues.map(c => c.length));
+    const maxColClueLen = Math.max(...puzzle.colClues.map(c => c.length));
+
+    let clueWidth, clueHeight;
+    if (size <= 5) {
+      clueWidth = Math.min(40, maxRowClueLen * 16 + 8);
+      clueHeight = Math.min(40, maxColClueLen * 14 + 8);
+    } else if (size <= 8) {
+      clueWidth = Math.min(48, maxRowClueLen * 14 + 10);
+      clueHeight = Math.min(48, maxColClueLen * 13 + 8);
+    } else if (size <= 10) {
+      clueWidth = Math.min(56, maxRowClueLen * 12 + 10);
+      clueHeight = Math.min(56, maxColClueLen * 12 + 8);
+    } else {
+      clueWidth = Math.min(62, maxRowClueLen * 11 + 8);
+      clueHeight = Math.min(62, maxColClueLen * 11 + 8);
+    }
+
+    const padding = 4;
+    const availableWidth = maxWidth - clueWidth - padding * 2;
     const cellSize = Math.floor(availableWidth / size);
-    const padding = 8;
-    const width = maxClueWidth + size * cellSize + padding * 2;
-    const height = maxClueHeight + size * cellSize + padding * 2;
-    return { size, cellSize, clueWidth: maxClueWidth, clueHeight: maxClueHeight, padding, width, height, offsetX: padding + maxClueWidth, offsetY: padding + maxClueHeight };
+
+    const width = clueWidth + size * cellSize + padding * 2;
+    const height = clueHeight + size * cellSize + padding * 2;
+    return { size, cellSize, clueWidth, clueHeight, padding, width, height, offsetX: padding + clueWidth, offsetY: padding + clueHeight };
   }, [puzzle]);
 
   const render = useCallback(() => {
@@ -260,10 +334,11 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       clueComplete: isDark ? '#475569' : '#D1D5DB',
       highlight: '#6C5CE7',
       highlightBg: isDark ? 'rgba(124,108,240,0.12)' : 'rgba(108,92,231,0.08)',
-      completedRowBg: isDark ? 'rgba(16,185,129,0.06)' : 'rgba(16,185,129,0.05)',
+      completedRowBg: isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.10)',
       autoXMark: '#6C5CE7',
-      mistakeBg: 'rgba(239,68,68,0.15)',
+      mistakeBg: 'rgba(239,68,68,0.25)',
       mistakeBorder: '#ef4444',
+      xMark: isDark ? '#64748B' : '#C0C4CC',
     };
 
     const { size, cellSize, clueWidth, clueHeight, padding, width, height, offsetX, offsetY } = layout;
@@ -280,7 +355,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
 
     const { row: hRow, col: hCol } = highlightRef.current;
 
-    // Row/col complete tint
     for (let i = 0; i < size; i++) {
       if (isRowComplete(puzzle.solution, playerGrid, i)) {
         ctx.fillStyle = C.completedRowBg;
@@ -294,15 +368,16 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       }
     }
 
-    // Highlight strips
     if (hRow >= 0) { ctx.fillStyle = C.highlightBg; ctx.fillRect(0, offsetY + hRow * cellSize, width, cellSize); }
     if (hCol >= 0) { ctx.fillStyle = C.highlightBg; ctx.fillRect(offsetX + hCol * cellSize, 0, cellSize, height); }
 
-    // Clues (단색 — 숫자만)
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    const clueFont = 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif';
-    const clueFontSmall = 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif';
+    const baseFontSize = cellSize <= 20 ? 10 : cellSize <= 28 ? 12 : 14;
+    const smallFontSize = Math.max(8, baseFontSize - 3);
+    const fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
+    const clueFont = `bold ${baseFontSize}px ${fontFamily}`;
+    const clueFontSmall = `bold ${smallFontSize}px ${fontFamily}`;
 
     puzzle.rowClues.forEach((clues, i) => {
       const complete = isRowComplete(puzzle.solution, playerGrid, i);
@@ -312,37 +387,47 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       ctx.fillText(clues.join(' '), padding + clueWidth / 2, y);
     });
 
+    const colClueLineHeight = Math.min(15, cellSize * 0.65);
     puzzle.colClues.forEach((clues, j) => {
       const complete = isColComplete(puzzle.solution, playerGrid, j);
       const x = offsetX + j * cellSize + cellSize / 2;
       ctx.font = clues.length > 3 ? clueFontSmall : clueFont;
       ctx.fillStyle = complete ? C.clueComplete : (j === hCol ? C.highlight : C.clueText);
       clues.forEach((clue, k) => {
-        const y = padding + clueHeight - (clues.length - k) * 16 + 8;
+        const y = padding + clueHeight - (clues.length - k) * colClueLineHeight + colClueLineHeight / 2;
         ctx.fillText(clue.toString(), x, y);
       });
     });
 
-    // Grid lines
     for (let i = 0; i <= size; i++) {
       const isBold = i % 5 === 0;
       ctx.strokeStyle = isBold ? C.gridBold : C.grid;
-      ctx.lineWidth = isBold ? 2 : 1;
+      ctx.lineWidth = isBold ? 1.5 : 0.5;
       ctx.beginPath(); ctx.moveTo(offsetX, offsetY + i * cellSize); ctx.lineTo(offsetX + size * cellSize, offsetY + i * cellSize); ctx.stroke();
       ctx.beginPath(); ctx.moveTo(offsetX + i * cellSize, offsetY); ctx.lineTo(offsetX + i * cellSize, offsetY + size * cellSize); ctx.stroke();
     }
 
-    // Cells
     const animAutoX = autoXAnimRef.current;
+    const flashingMistakes = mistakeFlashAnimRef.current;
+
     for (let i = 0; i < size; i++) {
       for (let j = 0; j < size; j++) {
         const cell = playerGrid[i][j];
         const x = offsetX + j * cellSize;
         const y = offsetY + i * cellSize;
+        const key = `${i}-${j}`;
+
+        if (flashingMistakes.has(key)) {
+          ctx.fillStyle = C.mistakeBg;
+          ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
+          ctx.strokeStyle = C.mistakeBorder;
+          ctx.lineWidth = 2;
+          ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
+        }
 
         if (cell === 1) {
           ctx.fillStyle = C.cellFilled;
-          const inset = Math.max(2, cellSize * 0.06);
+          const inset = Math.max(1.5, cellSize * 0.06);
           const r = Math.max(2, cellSize * 0.1);
           ctx.beginPath();
           ctx.moveTo(x + inset + r, y + inset);
@@ -357,9 +442,10 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
           ctx.closePath();
           ctx.fill();
         } else if (cell === 2) {
-          const isAuto = animAutoX.has(`${i}-${j}`);
-          ctx.strokeStyle = isAuto ? C.autoXMark : C.clueComplete;
-          ctx.lineWidth = 2;
+          const isAuto = animAutoX.has(key);
+          const isMistake = flashingMistakes.has(key);
+          ctx.strokeStyle = isMistake ? C.mistakeBorder : isAuto ? C.autoXMark : C.xMark;
+          ctx.lineWidth = isMistake ? 2.5 : 2;
           ctx.lineCap = 'round';
           const m = cellSize * 0.28;
           ctx.beginPath();
@@ -370,7 +456,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
         }
       }
     }
-  }, [puzzle, playerGrid, getLayout, isComplete, showMistakes, autoXCells]);
+  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells]);
 
   useEffect(() => { render(); }, [render]);
   useEffect(() => { const h = () => render(); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, [render]);
@@ -380,41 +466,191 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     return () => ob.disconnect();
   }, [render]);
 
+  const clampOffset = useCallback(() => {
+    const zoom = zoomRef.current;
+    const wrapper = wrapperRef.current;
+    const canvas = canvasRef.current;
+    if (!wrapper || !canvas) return;
+    const wRect = wrapper.getBoundingClientRect();
+    const cW = canvas.offsetWidth * zoom.scale;
+    const cH = canvas.offsetHeight * zoom.scale;
+    if (cW <= wRect.width) zoom.offsetX = (wRect.width - cW) / 2;
+    else zoom.offsetX = Math.min(0, Math.max(wRect.width - cW, zoom.offsetX));
+    if (cH <= wRect.height) zoom.offsetY = (wRect.height - cH) / 2;
+    else zoom.offsetY = Math.min(0, Math.max(wRect.height - cH, zoom.offsetY));
+  }, []);
+
+  const applyTransform = useCallback(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const zoom = zoomRef.current;
+    if (zoom.scale > 1) {
+      canvas.style.transform = `translate(${zoom.offsetX}px, ${zoom.offsetY}px) scale(${zoom.scale})`;
+      canvas.style.transformOrigin = '0 0';
+    } else {
+      canvas.style.transform = '';
+      canvas.style.transformOrigin = 'center center';
+    }
+  }, []);
+
   const getCellAt = useCallback((clientX, clientY) => {
     const canvas = canvasRef.current;
     const layout = layoutRef.current;
     if (!canvas || !layout) return null;
-    const rect = canvas.getBoundingClientRect();
-    const col = Math.floor((clientX - rect.left - layout.offsetX) / layout.cellSize);
-    const row = Math.floor((clientY - rect.top - layout.offsetY) / layout.cellSize);
+
+    const zoom = zoomRef.current;
+    const wrapper = wrapperRef.current;
+    let x, y;
+
+    if (wrapper && needsZoom && zoom.scale > 1) {
+      const wrapperRect = wrapper.getBoundingClientRect();
+      const rawX = clientX - wrapperRect.left;
+      const rawY = clientY - wrapperRect.top;
+      x = (rawX - zoom.offsetX) / zoom.scale;
+      y = (rawY - zoom.offsetY) / zoom.scale;
+    } else {
+      const rect = canvas.getBoundingClientRect();
+      x = clientX - rect.left;
+      y = clientY - rect.top;
+    }
+
+    const col = Math.floor((x - layout.offsetX) / layout.cellSize);
+    const row = Math.floor((y - layout.offsetY) / layout.cellSize);
     if (row >= 0 && row < layout.size && col >= 0 && col < layout.size) return { row, col };
     return null;
-  }, []);
+  }, [needsZoom]);
+
+  const getTouchDist = (touches) => {
+    const dx = touches[0].clientX - touches[1].clientX;
+    const dy = touches[0].clientY - touches[1].clientY;
+    return Math.sqrt(dx * dx + dy * dy);
+  };
+
+  const getTouchMid = (touches) => ({
+    x: (touches[0].clientX + touches[1].clientX) / 2,
+    y: (touches[0].clientY + touches[1].clientY) / 2,
+  });
+
+  const handleWrapperTouchStart = useCallback((e) => {
+    if (!needsZoom) return;
+    if (e.touches.length === 2) {
+      e.preventDefault();
+      const dist = getTouchDist(e.touches);
+      const mid = getTouchMid(e.touches);
+      const zoom = zoomRef.current;
+      zoom.isPinching = true;
+      zoom.startDist = dist;
+      zoom.startScale = zoom.scale;
+      zoom.startMidX = mid.x;
+      zoom.startMidY = mid.y;
+      zoom.startOffsetX = zoom.offsetX;
+      zoom.startOffsetY = zoom.offsetY;
+      interactionRef.current.isDown = false;
+      interactionRef.current.isDragging = false;
+    }
+  }, [needsZoom]);
+
+  const handleWrapperTouchMove = useCallback((e) => {
+    if (!needsZoom) return;
+    const zoom = zoomRef.current;
+    if (zoom.isPinching && e.touches.length === 2) {
+      e.preventDefault();
+      const dist = getTouchDist(e.touches);
+      const mid = getTouchMid(e.touches);
+      const newScale = Math.max(1, Math.min(4, zoom.startScale * (dist / zoom.startDist)));
+      const wrapper = wrapperRef.current;
+      if (wrapper) {
+        const wRect = wrapper.getBoundingClientRect();
+        const midLocalX = mid.x - wRect.left;
+        const midLocalY = mid.y - wRect.top;
+        const startMidLocalX = zoom.startMidX - wRect.left;
+        const startMidLocalY = zoom.startMidY - wRect.top;
+        const canvasX = (startMidLocalX - zoom.startOffsetX) / zoom.startScale;
+        const canvasY = (startMidLocalY - zoom.startOffsetY) / zoom.startScale;
+        zoom.offsetX = midLocalX - canvasX * newScale;
+        zoom.offsetY = midLocalY - canvasY * newScale;
+      }
+      zoom.scale = newScale;
+      clampOffset();
+      setZoomLevel(newScale);
+      applyTransform();
+    }
+  }, [needsZoom, clampOffset, applyTransform]);
+
+  const handleWrapperTouchEnd = useCallback((e) => {
+    if (!needsZoom) return;
+    const zoom = zoomRef.current;
+    zoom.isPinching = false;
+    if (zoom.scale < 1.1) {
+      zoom.scale = 1; zoom.offsetX = 0; zoom.offsetY = 0;
+      setZoomLevel(1);
+      applyTransform();
+    }
+  }, [needsZoom, applyTransform]);
 
   const handlePointerDown = useCallback((e) => {
     if (isComplete) return;
+    const zoom = zoomRef.current;
+    if (zoom.isPinching) return;
     const touch = e.touches ? e.touches[0] : e;
     if (e.touches && e.touches.length > 1) return;
     if (e.type === 'touchstart') e.preventDefault();
+
     const cell = getCellAt(touch.clientX, touch.clientY);
-    if (!cell) return;
+
+    if (needsZoom && zoom.scale > 1) {
+      zoom.isPanning = false;
+      zoom.panStartX = touch.clientX;
+      zoom.panStartY = touch.clientY;
+      zoom.panStartOffsetX = zoom.offsetX;
+      zoom.panStartOffsetY = zoom.offsetY;
+    }
+
+    if (!cell) {
+      if (needsZoom && zoom.scale > 1) zoom.isPanning = true;
+      return;
+    }
+
     const i = interactionRef.current;
     i.isDown = true; i.isDragging = false; i.startCell = cell;
     i.startX = touch.clientX; i.startY = touch.clientY; i.dragValue = null;
     highlightRef.current = { row: cell.row, col: cell.col };
     render();
-  }, [getCellAt, isComplete, render]);
+  }, [getCellAt, isComplete, render, needsZoom]);
 
   const handlePointerMove = useCallback((e) => {
+    const zoom = zoomRef.current;
+    if (zoom.isPinching) return;
     const touch = e.touches ? e.touches[0] : e;
     if (e.touches && e.touches.length > 1) return;
     if (e.type === 'touchmove') e.preventDefault();
+
+    if (needsZoom && zoom.scale > 1) {
+      const dx = touch.clientX - zoom.panStartX;
+      const dy = touch.clientY - zoom.panStartY;
+      const dist = Math.sqrt(dx * dx + dy * dy);
+      if (zoom.isPanning || (interactionRef.current.isDown && dist > DRAG_THRESHOLD * 2)) {
+        if (!zoom.isPanning) {
+          zoom.isPanning = true;
+          interactionRef.current.isDown = false;
+          interactionRef.current.isDragging = false;
+          highlightRef.current = { row: -1, col: -1 };
+        }
+        zoom.offsetX = zoom.panStartOffsetX + dx;
+        zoom.offsetY = zoom.panStartOffsetY + dy;
+        clampOffset();
+        applyTransform();
+        render();
+        return;
+      }
+    }
+
     const inter = interactionRef.current;
     const cell = getCellAt(touch.clientX, touch.clientY);
     if (cell) highlightRef.current = { row: cell.row, col: cell.col };
     else highlightRef.current = { row: -1, col: -1 };
 
-    if (inter.isDown && !inter.isDragging) {
+    if (inter.isDown && !inter.isDragging && !(needsZoom && zoom.scale > 1)) {
       const dx = touch.clientX - inter.startX;
       const dy = touch.clientY - inter.startY;
       if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THRESHOLD) {
@@ -431,11 +667,22 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       onFillCell(cell.row, cell.col, inter.dragValue);
     }
     render();
-  }, [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode]);
+  }, [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode, needsZoom, clampOffset, applyTransform]);
 
   const handlePointerUp = useCallback((e) => {
     if (e.type === 'touchend') e.stopPropagation();
+    const zoom = zoomRef.current;
     const inter = interactionRef.current;
+
+    if (zoom.isPanning) {
+      zoom.isPanning = false;
+      inter.isDown = false;
+      inter.isDragging = false;
+      inter.dragValue = null;
+      inter.startCell = null;
+      return;
+    }
+
     if (inter.isDown && !inter.isDragging) {
       const cell = inter.startCell;
       if (cell && !isComplete) onToggleCell(cell.row, cell.col);
@@ -446,7 +693,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     render();
   }, [onEndDrag, onToggleCell, render, isComplete]);
 
-  // Register native touch listeners (non-passive) for mobile single-tap fix
   useEffect(() => {
     const canvas = canvasRef.current;
     if (!canvas) return;
@@ -463,12 +709,110 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     };
   }, [handlePointerDown, handlePointerMove, handlePointerUp]);
 
+  // Double tap to zoom
+  const lastTapRef = useRef(0);
+  useEffect(() => {
+    if (!needsZoom) return;
+    const wrapper = wrapperRef.current;
+    if (!wrapper) return;
+    const handleDoubleTap = (e) => {
+      if (e.touches && e.touches.length !== 1) return;
+      const now = Date.now();
+      if (now - lastTapRef.current < 300) {
+        const zoom = zoomRef.current;
+        if (zoom.scale > 1.1) {
+          zoom.scale = 1; zoom.offsetX = 0; zoom.offsetY = 0;
+          setZoomLevel(1);
+        } else {
+          const touch = e.changedTouches ? e.changedTouches[0] : e;
+          const wRect = wrapper.getBoundingClientRect();
+          const tapX = touch.clientX - wRect.left;
+          const tapY = touch.clientY - wRect.top;
+          const canvasX = tapX / zoom.scale;
+          const canvasY = tapY / zoom.scale;
+          zoom.scale = 2;
+          zoom.offsetX = tapX - canvasX * 2;
+          zoom.offsetY = tapY - canvasY * 2;
+          clampOffset();
+          setZoomLevel(2);
+        }
+        applyTransform();
+        lastTapRef.current = 0;
+      } else {
+        lastTapRef.current = now;
+      }
+    };
+    wrapper.addEventListener('touchend', handleDoubleTap, { passive: true });
+    return () => wrapper.removeEventListener('touchend', handleDoubleTap);
+  }, [needsZoom, applyTransform, clampOffset]);
+
+  const handleZoomIn = useCallback(() => {
+    const zoom = zoomRef.current;
+    const canvas = canvasRef.current;
+    const wrapper = wrapperRef.current;
+    if (!canvas || !wrapper) return;
+    const wRect = wrapper.getBoundingClientRect();
+    const centerX = wRect.width / 2;
+    const centerY = wRect.height / 2;
+    const canvasX = (centerX - zoom.offsetX) / zoom.scale;
+    const canvasY = (centerY - zoom.offsetY) / zoom.scale;
+    const newScale = Math.min(4, zoom.scale + 0.5);
+    zoom.scale = newScale;
+    zoom.offsetX = centerX - canvasX * newScale;
+    zoom.offsetY = centerY - canvasY * newScale;
+    clampOffset();
+    setZoomLevel(newScale);
+    applyTransform();
+  }, [clampOffset, applyTransform]);
+
+  const handleZoomOut = useCallback(() => {
+    const zoom = zoomRef.current;
+    const canvas = canvasRef.current;
+    const wrapper = wrapperRef.current;
+    if (!canvas || !wrapper) return;
+    const wRect = wrapper.getBoundingClientRect();
+    const centerX = wRect.width / 2;
+    const centerY = wRect.height / 2;
+    const canvasX = (centerX - zoom.offsetX) / zoom.scale;
+    const canvasY = (centerY - zoom.offsetY) / zoom.scale;
+    const newScale = Math.max(1, zoom.scale - 0.5);
+    zoom.scale = newScale;
+    if (newScale <= 1) {
+      zoom.offsetX = 0;
+      zoom.offsetY = 0;
+    } else {
+      zoom.offsetX = centerX - canvasX * newScale;
+      zoom.offsetY = centerY - canvasY * newScale;
+      clampOffset();
+    }
+    setZoomLevel(newScale);
+    applyTransform();
+  }, [clampOffset, applyTransform]);
+
   return (
-    <div className="canvas-wrapper">
+    <div
+      ref={wrapperRef}
+      className={`canvas-wrapper ${needsZoom ? 'zoomable' : ''}`}
+      onTouchStart={handleWrapperTouchStart}
+      onTouchMove={handleWrapperTouchMove}
+      onTouchEnd={handleWrapperTouchEnd}
+    >
       <canvas ref={canvasRef} className="game-canvas"
         onMouseDown={handlePointerDown} onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp}
       />
+      {needsZoom && zoomLevel > 1.05 && (
+        <div className="zoom-indicator">{Math.round(zoomLevel * 100)}%</div>
+      )}
+      {needsZoom && (
+        <div className="zoom-buttons">
+          <button className="zoom-btn" onClick={handleZoomIn} aria-label="확대">+</button>
+          <button className="zoom-btn" onClick={handleZoomOut} disabled={zoomLevel <= 1.05} aria-label="축소">−</button>
+        </div>
+      )}
+      {needsZoom && zoomLevel <= 1.05 && (
+        <div className="zoom-hint">핀치로 확대 · 더블탭 줌인</div>
+      )}
     </div>
   );
 }
@@ -480,7 +824,6 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const [displayTime, setDisplayTime] = useState('00:00');
   const timerRef = useRef(null);
   const wasCompleteRef = useRef(false);
-  const settings = loadSettings();
 
   useEffect(() => {
     if (!collection) return;
@@ -578,8 +921,8 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
           onFillCell={handleFillCell}
           onEndDrag={handleEndDrag}
           isComplete={state.isComplete}
-          showMistakes={settings.showMistakes}
           autoXCells={state.autoXCells}
+          mistakeFlashCells={state.mistakeFlashCells}
         />
       </main>
 
@@ -617,7 +960,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
 
       {state.isComplete && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onGoHome()}>
-          <div className="modal-content">
+          <div className="modal-content complete-modal">
             <div className="modal-icon" style={{ fontSize: 56 }}>{collection.emoji}</div>
             <h2>타일 완료!</h2>
             <p className="puzzle-complete-name">{collection.name} #{tileNumber}</p>
