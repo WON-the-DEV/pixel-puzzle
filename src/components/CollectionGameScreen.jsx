@@ -727,37 +727,65 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const handleRestart = useCallback(() => { wasCompleteRef.current = false; dispatch({ type: 'RESTART' }); }, []);
   const handleRevive = useCallback(() => { dispatch({ type: 'REVIVE' }); }, []);
 
-  // Controller mode handlers
-  const handleControllerMove = useCallback((direction) => {
-    if (!state.puzzle) return;
-    setCursorRow(prev => {
-      if (direction === 'up') return Math.max(0, prev - 1);
-      if (direction === 'down') return Math.min(state.puzzle.size - 1, prev + 1);
-      return prev;
-    });
-    setCursorCol(prev => {
-      if (direction === 'left') return Math.max(0, prev - 1);
-      if (direction === 'right') return Math.min(state.puzzle.size - 1, prev + 1);
-      return prev;
-    });
-    hapticFill();
-  }, [state.puzzle]);
-
+  // Controller mode handlers — Bug 5 fix: ensure mode is correct before toggling
   const handleControllerFill = useCallback(() => {
     if (state.isComplete || state.isGameOver || !state.puzzle) return;
+    const current = state.playerGrid[cursorRow]?.[cursorCol];
+    if (current === undefined) return;
+    
     playFill();
     hapticFill();
+    
+    if (current === 2) return; // Already X-marked, skip
     if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
     dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
-  }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode]);
+  }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode, state.playerGrid]);
 
   const handleControllerMark = useCallback(() => {
     if (state.isComplete || state.isGameOver || !state.puzzle) return;
+    const current = state.playerGrid[cursorRow]?.[cursorCol];
+    if (current === undefined) return;
+    
     playMark();
     hapticFill();
+    
+    if (current === 1) return; // Already filled, skip
     if (state.mode !== 'mark') dispatch({ type: 'TOGGLE_MODE' });
     dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
-  }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode]);
+  }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode, state.playerGrid]);
+
+  // Bug 4: handleControllerMove accepts holdAction for continuous fill/mark
+  const handleControllerMove = useCallback((direction, holdAction) => {
+    if (!state.puzzle) return;
+    
+    let newRow = cursorRow;
+    let newCol = cursorCol;
+    
+    if (direction === 'up') newRow = Math.max(0, cursorRow - 1);
+    if (direction === 'down') newRow = Math.min(state.puzzle.size - 1, cursorRow + 1);
+    if (direction === 'left') newCol = Math.max(0, cursorCol - 1);
+    if (direction === 'right') newCol = Math.min(state.puzzle.size - 1, cursorCol + 1);
+    
+    setCursorRow(newRow);
+    setCursorCol(newCol);
+    hapticFill();
+    
+    // If holding fill/mark button while moving, auto-apply action
+    if (holdAction && !state.isComplete && !state.isGameOver) {
+      const current = state.playerGrid[newRow]?.[newCol];
+      if (current === undefined) return;
+      
+      if (holdAction === 'fill' && current === 0) {
+        playFill();
+        if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
+        setTimeout(() => dispatch({ type: 'TOGGLE_CELL', row: newRow, col: newCol }), 0);
+      } else if (holdAction === 'mark' && current === 0) {
+        playMark();
+        if (state.mode !== 'mark') dispatch({ type: 'TOGGLE_MODE' });
+        setTimeout(() => dispatch({ type: 'TOGGLE_CELL', row: newRow, col: newCol }), 0);
+      }
+    }
+  }, [state.puzzle, cursorRow, cursorCol, state.isComplete, state.isGameOver, state.playerGrid, state.mode]);
 
   if (!state.puzzle) return null;
 
@@ -785,7 +813,11 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
               </span>
             ))}
           </div>
-          {!controllerMode && <div className="timer">{displayTime}</div>}
+          {controllerMode ? (
+            <div className="timer timer--compact">{displayTime}</div>
+          ) : (
+            <div className="timer">{displayTime}</div>
+          )}
         </div>
       </header>
 
@@ -819,9 +851,9 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
       {/* Controls */}
       {controllerMode ? (
         <footer className="controls controller-controls">
-          <div className="controller-top-bar">
+          <div className="controller-utility-bar">
             <button className="control-btn-sm" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
-              <LightbulbIcon size={18} color="var(--text)" />
+              <LightbulbIcon size={16} color="var(--text)" />
               <span>힌트</span>
               {hints > 0 && <span className="count-sm">{hints}</span>}
             </button>
@@ -830,7 +862,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
               onClick={() => setControllerMode(false)}
               aria-label="터치 모드로 전환"
             >
-              <TouchIcon size={18} color="var(--text)" />
+              <TouchIcon size={16} color="var(--text)" />
               <span>터치</span>
             </button>
           </div>

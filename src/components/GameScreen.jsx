@@ -166,38 +166,88 @@ export default function GameScreen({
   }, [onUseHint]);
 
   // Controller mode handlers
-  const handleControllerMove = useCallback((direction) => {
-    if (!puzzle) return;
-    setCursorRow(prev => {
-      if (direction === 'up') return Math.max(0, prev - 1);
-      if (direction === 'down') return Math.min(puzzle.size - 1, prev + 1);
-      return prev;
-    });
-    setCursorCol(prev => {
-      if (direction === 'left') return Math.max(0, prev - 1);
-      if (direction === 'right') return Math.min(puzzle.size - 1, prev + 1);
-      return prev;
-    });
-    hapticFill();
-  }, [puzzle]);
-
+  // Bug 5 fix: Use onFillCell directly instead of toggling mode + onToggleCell
+  // This avoids the stale mode issue where React batches the mode toggle and cell toggle
   const handleControllerFill = useCallback(() => {
     if (isComplete || isGameOver || !puzzle) return;
+    const current = playerGrid[cursorRow]?.[cursorCol];
+    if (current === undefined) return;
+    
     playFill();
     hapticFill();
-    // Ensure fill mode then toggle — React batches these dispatches
-    if (mode !== 'fill') onToggleMode();
-    onToggleCell(cursorRow, cursorCol);
-  }, [cursorRow, cursorCol, isComplete, isGameOver, puzzle, mode, onToggleMode, onToggleCell]);
+    
+    // If already filled, unfill (toggle off)
+    if (current === 1) {
+      // Need fill mode to unfill
+      if (mode !== 'fill') onToggleMode();
+      onToggleCell(cursorRow, cursorCol);
+    } else if (current === 2) {
+      // Already X-marked, skip
+      return;
+    } else {
+      // Empty cell - fill it directly using fill mode
+      if (mode !== 'fill') onToggleMode();
+      onToggleCell(cursorRow, cursorCol);
+    }
+  }, [cursorRow, cursorCol, isComplete, isGameOver, puzzle, mode, onToggleMode, onToggleCell, playerGrid]);
 
   const handleControllerMark = useCallback(() => {
     if (isComplete || isGameOver || !puzzle) return;
+    const current = playerGrid[cursorRow]?.[cursorCol];
+    if (current === undefined) return;
+    
     playMark();
     hapticFill();
-    // Ensure mark mode then toggle — React batches these dispatches
-    if (mode !== 'mark') onToggleMode();
-    onToggleCell(cursorRow, cursorCol);
-  }, [cursorRow, cursorCol, isComplete, isGameOver, puzzle, mode, onToggleMode, onToggleCell]);
+    
+    if (current === 1) {
+      // Already filled, skip
+      return;
+    } else {
+      // Toggle X mark
+      if (mode !== 'mark') onToggleMode();
+      onToggleCell(cursorRow, cursorCol);
+    }
+  }, [cursorRow, cursorCol, isComplete, isGameOver, puzzle, mode, onToggleMode, onToggleCell, playerGrid]);
+
+  // Bug 4: handleControllerMove now accepts holdAction for continuous fill/mark
+  const handleControllerMove = useCallback((direction, holdAction) => {
+    if (!puzzle) return;
+    
+    let newRow = cursorRow;
+    let newCol = cursorCol;
+    
+    if (direction === 'up') newRow = Math.max(0, cursorRow - 1);
+    if (direction === 'down') newRow = Math.min(puzzle.size - 1, cursorRow + 1);
+    if (direction === 'left') newCol = Math.max(0, cursorCol - 1);
+    if (direction === 'right') newCol = Math.min(puzzle.size - 1, cursorCol + 1);
+    
+    setCursorRow(newRow);
+    setCursorCol(newCol);
+    hapticFill();
+    
+    // If holding fill/mark button while moving, auto-apply action
+    if (holdAction && !isComplete && !isGameOver) {
+      const current = playerGrid[newRow]?.[newCol];
+      if (current === undefined) return;
+      
+      if (holdAction === 'fill') {
+        if (current === 0) {
+          // Empty cell - fill it
+          playFill();
+          if (mode !== 'fill') onToggleMode();
+          // Use setTimeout to ensure mode change is processed
+          setTimeout(() => onToggleCell(newRow, newCol), 0);
+        }
+      } else if (holdAction === 'mark') {
+        if (current === 0) {
+          // Empty cell - mark it
+          playMark();
+          if (mode !== 'mark') onToggleMode();
+          setTimeout(() => onToggleCell(newRow, newCol), 0);
+        }
+      }
+    }
+  }, [puzzle, cursorRow, cursorCol, isComplete, isGameOver, playerGrid, mode, onToggleMode, onToggleCell]);
 
   if (!puzzle) return null;
 
@@ -233,7 +283,11 @@ export default function GameScreen({
               </span>
             ))}
           </div>
-          {!controllerMode && <div className="timer">{displayTime}</div>}
+          {controllerMode ? (
+            <div className="timer timer--compact">{displayTime}</div>
+          ) : (
+            <div className="timer">{displayTime}</div>
+          )}
         </div>
       </header>
 
@@ -272,9 +326,10 @@ export default function GameScreen({
       {/* Controls */}
       {controllerMode ? (
         <footer className="controls controller-controls">
-          <div className="controller-top-bar">
+          {/* Bug 1: Hint + Touch buttons moved to a utility bar above the controller */}
+          <div className="controller-utility-bar">
             <button className="control-btn-sm" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver}>
-              <LightbulbIcon size={18} color="var(--text)" />
+              <LightbulbIcon size={16} color="var(--text)" />
               <span>힌트</span>
               {hints > 0 && <span className="count-sm">{hints}</span>}
             </button>
@@ -283,7 +338,7 @@ export default function GameScreen({
               onClick={() => setControllerMode(false)}
               aria-label="터치 모드로 전환"
             >
-              <TouchIcon size={18} color="var(--text)" />
+              <TouchIcon size={16} color="var(--text)" />
               <span>터치</span>
             </button>
           </div>

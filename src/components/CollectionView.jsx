@@ -62,6 +62,7 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
         const ty = tr * tileH;
 
         if (isCompleted) {
+          // Show completed tile in full color
           const startR = tr * tileSize;
           const startC = tc * tileSize;
           for (let r = 0; r < tileSize; r++) {
@@ -78,11 +79,13 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
             }
           }
         } else if (hasContent) {
-          ctx.fillStyle = isDark ? '#253355' : '#E8E9EE';
+          // Bug 6: No silhouette — just grey block with number, hiding the picture
+          ctx.fillStyle = isDark ? '#253355' : '#E0E2E8';
           ctx.fillRect(tx + 1, ty + 1, tileW - 2, tileH - 2);
 
+          // Show "?" instead of number to hide content
           const num = tr * tileCols + tc + 1;
-          ctx.fillStyle = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.2)';
+          ctx.fillStyle = isDark ? 'rgba(255,255,255,0.3)' : 'rgba(0,0,0,0.15)';
           ctx.font = `bold ${Math.max(12, tileW * 0.25)}px -apple-system, system-ui, sans-serif`;
           ctx.textAlign = 'center';
           ctx.textBaseline = 'middle';
@@ -182,23 +185,21 @@ function MiniPreview({ collection, completedTiles }) {
     ctx.fillStyle = isDark ? '#1E2A45' : '#F0F1F5';
     ctx.fillRect(0, 0, previewSize, previewSize);
 
+    // Bug 6: Only show completed tiles in color, hide silhouettes for incomplete tiles
     for (let r = 0; r < totalRows; r++) {
       for (let c = 0; c < totalCols; c++) {
         const val = bigPicture[r][c];
-        // Check if this tile is completed
         const tr = Math.floor(r / tileSize);
         const tc = Math.floor(c / tileSize);
         const tileKey = `${id}-${tr}-${tc}`;
         const isCompleted = completedTiles.has(tileKey);
 
-        if (val > 0) {
-          if (isCompleted) {
-            ctx.fillStyle = palette[val - 1] || '#888';
-          } else {
-            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
-          }
+        if (isCompleted && val > 0) {
+          // Completed tile: show in full color
+          ctx.fillStyle = palette[val - 1] || '#888';
           ctx.fillRect(ox + c * cellSize, oy + r * cellSize, cellSize, cellSize);
         }
+        // Incomplete tiles: show nothing (no silhouette)
       }
     }
   }, [bigPicture, palette, completedTiles, id, tileSize, tileRows, tileCols]);

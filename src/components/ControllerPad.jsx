@@ -1,4 +1,4 @@
-import { useRef, useCallback } from 'react';
+import { useRef, useCallback, useState } from 'react';
 import { PencilIcon, XMarkIcon } from './icons/Icons.jsx';
 
 // Arrow icons
@@ -36,9 +36,11 @@ const REPEAT_INTERVAL = 120;
 
 export default function ControllerPad({ onMove, onFill, onMark }) {
   const repeatRef = useRef(null);
+  const holdActionRef = useRef(null); // 'fill' | 'mark' | null
 
   const handleDirStart = useCallback((dir) => {
-    const action = () => onMove(dir);
+    const action = () => onMove(dir, holdActionRef.current);
+
     action();
 
     let intervalId = null;
@@ -70,6 +72,29 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
     onMouseLeave: handleDirEnd,
   });
 
+  // Hold action handlers for fill/mark buttons
+  const handleFillStart = useCallback((e) => {
+    if (e) e.preventDefault();
+    holdActionRef.current = 'fill';
+    onFill();
+  }, [onFill]);
+
+  const handleFillEnd = useCallback((e) => {
+    if (e) e.preventDefault();
+    holdActionRef.current = null;
+  }, []);
+
+  const handleMarkStart = useCallback((e) => {
+    if (e) e.preventDefault();
+    holdActionRef.current = 'mark';
+    onMark();
+  }, [onMark]);
+
+  const handleMarkEnd = useCallback((e) => {
+    if (e) e.preventDefault();
+    holdActionRef.current = null;
+  }, []);
+
   return (
     <div className="controller-pad">
       <div className="controller-left">
@@ -97,8 +122,12 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
       <div className="controller-right">
         <button
           className="action-btn action-fill"
-          onTouchStart={(e) => { e.preventDefault(); onFill(); }}
-          onClick={onFill}
+          onTouchStart={handleFillStart}
+          onTouchEnd={handleFillEnd}
+          onTouchCancel={handleFillEnd}
+          onMouseDown={handleFillStart}
+          onMouseUp={handleFillEnd}
+          onMouseLeave={handleFillEnd}
           aria-label="채우기"
         >
           <PencilIcon size={20} color="var(--accent)" />
@@ -106,8 +135,12 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
         </button>
         <button
           className="action-btn action-mark"
-          onTouchStart={(e) => { e.preventDefault(); onMark(); }}
-          onClick={onMark}
+          onTouchStart={handleMarkStart}
+          onTouchEnd={handleMarkEnd}
+          onTouchCancel={handleMarkEnd}
+          onMouseDown={handleMarkStart}
+          onMouseUp={handleMarkEnd}
+          onMouseLeave={handleMarkEnd}
           aria-label="X표시"
         >
           <XMarkIcon size={20} color="var(--danger)" />

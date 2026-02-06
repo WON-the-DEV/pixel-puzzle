@@ -49,63 +49,109 @@ const CAT_PICTURE = [
 // ─── 컬렉션 2: 꽃 (3×3 타일, 각 10×10 = 총 30×30) ───
 const FLOWER_PALETTE = ['#FF6B6B', '#FF8E8E', '#4ECDC4', '#2ECC71', '#F39C12'];
 
-// 30×30 꽃 pixel art (간결하게 표현)
+// Bug 7: Balanced flower — outlines with some fill, 25-55% per tile
 function generateFlowerPicture() {
   const size = 30;
   const pic = Array(size).fill(null).map(() => Array(size).fill(0));
   
-  // 꽃잎 - 상단 (빨강/핑크)
-  const petalPositions = [
-    // 상단 꽃잎
-    {cx: 15, cy: 6, r: 5, color: 1},
-    // 좌측 꽃잎
-    {cx: 8, cy: 13, r: 5, color: 2},
-    // 우측 꽃잎
-    {cx: 22, cy: 13, r: 5, color: 1},
-    // 하단 좌 꽃잎
-    {cx: 10, cy: 20, r: 4, color: 2},
-    // 하단 우 꽃잎
-    {cx: 20, cy: 20, r: 4, color: 1},
-  ];
-  
-  for (const p of petalPositions) {
-    for (let y = p.cy - p.r; y <= p.cy + p.r; y++) {
-      for (let x = p.cx - p.r; x <= p.cx + p.r; x++) {
-        const dx = x - p.cx;
-        const dy = y - p.cy;
-        if (dx * dx + dy * dy <= p.r * p.r && y >= 0 && y < size && x >= 0 && x < size) {
-          pic[y][x] = p.color;
+  // Helper: draw filled circle
+  function fillCircle(cx, cy, r, color) {
+    for (let y = cy - r; y <= cy + r; y++) {
+      for (let x = cx - r; x <= cx + r; x++) {
+        if (y < 0 || y >= size || x < 0 || x >= size) continue;
+        const dx = x - cx;
+        const dy = y - cy;
+        if (dx * dx + dy * dy <= r * r) {
+          pic[y][x] = color;
         }
       }
     }
   }
-
-  // 중심 (노랑)
-  for (let y = 11; y <= 17; y++) {
-    for (let x = 12; x <= 18; x++) {
-      const dx = x - 15;
-      const dy = y - 14;
-      if (dx * dx + dy * dy <= 9) {
-        pic[y][x] = 5;
+  
+  // Helper: clear inner circle (make ring)
+  function clearCircle(cx, cy, r) {
+    for (let y = cy - r; y <= cy + r; y++) {
+      for (let x = cx - r; x <= cx + r; x++) {
+        if (y < 0 || y >= size || x < 0 || x >= size) continue;
+        const dx = x - cx;
+        const dy = y - cy;
+        if (dx * dx + dy * dy <= r * r) {
+          pic[y][x] = 0;
+        }
       }
     }
   }
+  
+  // 꽃잎 - thin rings (larger hollow center)
+  fillCircle(15, 6, 5, 1);   clearCircle(15, 6, 3);    // 상단 꽃잎 ring
+  fillCircle(8, 13, 5, 2);   clearCircle(8, 13, 3);     // 좌측 꽃잎 ring
+  fillCircle(22, 13, 5, 1);  clearCircle(22, 13, 3);    // 우측 꽃잎 ring
+  fillCircle(10, 20, 4, 2);  clearCircle(10, 20, 2);    // 하단 좌 꽃잎 ring
+  fillCircle(20, 20, 4, 1);  clearCircle(20, 20, 2);    // 하단 우 꽃잎 ring
 
-  // 줄기 (초록)
+  // 중심 (thin ring only)
+  fillCircle(15, 14, 3, 5);
+  clearCircle(15, 14, 2);
+  // Just a center dot
+  pic[14][15] = 5;
+
+  // 줄기 (double width)
   for (let y = 18; y < 28; y++) {
+    pic[y][14] = 4;
     pic[y][15] = 4;
-    if (y < 26) pic[y][14] = 4;
   }
   
-  // 잎 좌
-  for (let i = 0; i < 4; i++) {
-    pic[22 + i][13 - i] = 4;
-    pic[22 + i][12 - i] = 4;
+  // 잎 좌 (wider leaf shape)
+  for (let i = 0; i < 5; i++) {
+    const baseY = 21 + i;
+    if (baseY < size) {
+      if (13 - i >= 0) pic[baseY][13 - i] = 4;
+      if (12 - i >= 0) pic[baseY][12 - i] = 4;
+      if (11 - i >= 0 && i < 4) pic[baseY][11 - i] = 4;
+    }
   }
-  // 잎 우
-  for (let i = 0; i < 4; i++) {
-    pic[20 + i][16 + i] = 4;
-    pic[20 + i][17 + i] = 4;
+  // 잎 우 (wider leaf shape)
+  for (let i = 0; i < 5; i++) {
+    const baseY = 19 + i;
+    if (baseY < size) {
+      if (16 + i < size) pic[baseY][16 + i] = 4;
+      if (17 + i < size) pic[baseY][17 + i] = 4;
+      if (18 + i < size && i < 4) pic[baseY][18 + i] = 4;
+    }
+  }
+  
+  // Corner decorations — small dots/shapes to give edge tiles content
+  // Top-left: small leaf bud
+  const buds = [
+    [2, 3], [2, 4], [3, 3], [3, 4], [4, 2],
+    [1, 5], [3, 6], [5, 2], [6, 3],
+  ];
+  for (const [by, bx] of buds) {
+    if (pic[by][bx] === 0) pic[by][bx] = 4;
+  }
+  // Top-right: small decoration
+  const topRight = [
+    [1, 27], [2, 26], [2, 27], [3, 25], [3, 26],
+    [4, 27], [5, 28], [6, 27],
+  ];
+  for (const [by, bx] of topRight) {
+    if (bx < size && pic[by][bx] === 0) pic[by][bx] = 2;
+  }
+  // Bottom-left
+  const botLeft = [
+    [27, 2], [27, 3], [28, 3], [28, 4], [26, 1],
+    [29, 2], [29, 3], [26, 4], [25, 2],
+  ];
+  for (const [by, bx] of botLeft) {
+    if (by < size && pic[by][bx] === 0) pic[by][bx] = 4;
+  }
+  // Bottom-right
+  const botRight = [
+    [27, 27], [27, 26], [28, 26], [28, 27], [29, 28],
+    [26, 28], [25, 27], [29, 26],
+  ];
+  for (const [by, bx] of botRight) {
+    if (by < size && bx < size && pic[by][bx] === 0) pic[by][bx] = 1;
   }
 
   return pic;
@@ -114,19 +160,36 @@ function generateFlowerPicture() {
 // ─── 컬렉션 3: 로켓 (3×3 타일, 각 10×10 = 총 30×30) ───
 const ROCKET_PALETTE = ['#E74C3C', '#3498DB', '#ECF0F1', '#F39C12', '#2C3E50'];
 
+// Bug 7: Balanced rocket — outlines + partial fills, 20-55% per tile
 function generateRocketPicture() {
   const size = 30;
   const pic = Array(size).fill(null).map(() => Array(size).fill(0));
 
-  // 로켓 본체 (흰색/회색)
+  // 로켓 본체 — outline with some internal detail (not fully solid)
   for (let y = 4; y < 22; y++) {
     const halfWidth = y < 8 ? (y - 4) + 1 : y < 18 ? 5 : 5 - (y - 18);
-    for (let x = 15 - halfWidth; x <= 15 + halfWidth; x++) {
-      if (x >= 0 && x < size) pic[y][x] = 3;
+    const left = 15 - halfWidth;
+    const right = 15 + halfWidth;
+    // Left and right walls
+    if (left >= 0 && left < size) pic[y][left] = 3;
+    if (left + 1 >= 0 && left + 1 < size && halfWidth > 2) pic[y][left + 1] = 3;
+    if (right >= 0 && right < size) pic[y][right] = 3;
+    if (right - 1 >= 0 && right - 1 < size && halfWidth > 2) pic[y][right - 1] = 3;
+    // Top edge (cone)
+    if (y < 8) {
+      for (let x = left; x <= right; x++) {
+        if (x >= 0 && x < size) pic[y][x] = 3;
+      }
+    }
+    // Bottom edge
+    if (y === 21) {
+      for (let x = left; x <= right; x++) {
+        if (x >= 0 && x < size) pic[y][x] = 3;
+      }
     }
   }
   
-  // 코 (빨강)
+  // 코 (빨강) — solid cone tip
   for (let y = 2; y < 6; y++) {
     const hw = Math.max(0, y - 3);
     for (let x = 15 - hw; x <= 15 + hw; x++) {
@@ -134,7 +197,7 @@ function generateRocketPicture() {
     }
   }
 
-  // 창문 (파랑)
+  // 창문 (파랑) — solid small circle
   for (let y = 9; y <= 12; y++) {
     for (let x = 13; x <= 17; x++) {
       const dx = x - 15;
@@ -145,37 +208,100 @@ function generateRocketPicture() {
     }
   }
 
-  // 날개 좌 (빨강)
+  // 날개 좌 (빨강) — outline triangle
   for (let y = 16; y < 22; y++) {
     const w = Math.min(y - 16 + 1, 3);
-    for (let x = 10 - w; x <= 10; x++) {
-      if (x >= 0) pic[y][x] = 1;
+    const left = 10 - w;
+    // Left edge and right edge of wing
+    if (left >= 0) pic[y][left] = 1;
+    pic[y][10] = 1;
+    // Top and bottom fill
+    if (y === 16 || y === 21 || y === 17) {
+      for (let x = left; x <= 10; x++) {
+        if (x >= 0) pic[y][x] = 1;
+      }
     }
   }
 
-  // 날개 우 (빨강)
+  // 날개 우 (빨강) — outline triangle
   for (let y = 16; y < 22; y++) {
     const w = Math.min(y - 16 + 1, 3);
-    for (let x = 20; x <= 20 + w; x++) {
-      if (x < size) pic[y][x] = 1;
+    const right = 20 + w;
+    pic[y][20] = 1;
+    if (right < size) pic[y][right] = 1;
+    if (y === 16 || y === 21 || y === 17) {
+      for (let x = 20; x <= right; x++) {
+        if (x < size) pic[y][x] = 1;
+      }
     }
   }
 
-  // 화염 (노랑/주황)
+  // 화염 (노랑/주황) — alternating pattern for interest
   for (let y = 22; y < 28; y++) {
     const intensity = 28 - y;
     const hw = Math.min(intensity, 3);
     for (let x = 15 - hw; x <= 15 + hw; x++) {
       if (x >= 0 && x < size) {
-        pic[y][x] = (y % 2 === 0) ? 4 : 1;
+        // Checkerboard pattern for interesting puzzle
+        if ((x + y) % 2 === 0) {
+          pic[y][x] = 4;
+        } else {
+          pic[y][x] = 1;
+        }
       }
     }
   }
 
-  // 별 배경 (작은 점들) - 진한 파랑
-  const stars = [[2, 3], [5, 25], [1, 20], [8, 2], [3, 27], [25, 3], [27, 26], [10, 27], [22, 1]];
+  // 별 배경 + 행성/성운 — all tiles get meaningful content
+  // Scattered stars (single dots)
+  const stars = [
+    [2, 3], [5, 25], [1, 20], [8, 2], [3, 27], 
+    [25, 3], [27, 26], [10, 27], [22, 1],
+    [0, 8], [7, 28], [28, 8], [15, 0], [15, 29],
+    [4, 26], [26, 4], [0, 0], [29, 29], [6, 0],
+    [24, 28], [1, 1], [28, 1], [1, 28],
+  ];
   for (const [sy, sx] of stars) {
-    if (pic[sy][sx] === 0) pic[sy][sx] = 5;
+    if (sy < size && sx < size && pic[sy][sx] === 0) pic[sy][sx] = 5;
+  }
+  
+  // Small planet top-left (gives tile [0,0] more content)
+  const planetTL = [[3, 4], [3, 5], [4, 3], [4, 4], [4, 5], [4, 6], [5, 4], [5, 5], [6, 3], [6, 4], [6, 5], [7, 4], [7, 5], [8, 4]];
+  for (const [py, px] of planetTL) {
+    if (pic[py][px] === 0) pic[py][px] = 2;
+  }
+  
+  // Space station mid-left (gives tile [1,0] more content)
+  const stationML = [
+    [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7],
+    [11, 3], [11, 5], [11, 7],
+    [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7],
+    [13, 3], [13, 5],
+    [14, 1], [14, 2], [14, 3], [14, 4], [14, 5], [14, 6], [14, 7], [14, 8],
+    [15, 3], [15, 5],
+    [16, 2], [16, 3], [16, 4], [16, 5], [16, 6], [16, 7],
+    [17, 4], [17, 5], [18, 3], [18, 4], [18, 5], [18, 6],
+  ];
+  for (const [sy, sx] of stationML) {
+    if (sy < size && sx < size && pic[sy][sx] === 0) pic[sy][sx] = 3;
+  }
+  
+  // Small nebula top-right (gives tile [0,2] content)
+  const nebulaTR = [[2, 24], [2, 25], [3, 23], [3, 24], [3, 25], [3, 26], [4, 24], [4, 25], [5, 23], [5, 26], [6, 24], [6, 25]];
+  for (const [ny, nx] of nebulaTR) {
+    if (nx < size && pic[ny][nx] === 0) pic[ny][nx] = 4;
+  }
+  
+  // Asteroid cluster bottom-left (gives tile [2,0] content)
+  const asteroidBL = [[22, 3], [22, 4], [23, 2], [23, 3], [23, 4], [24, 3], [24, 4], [24, 5], [25, 4], [25, 5], [26, 3], [26, 4], [27, 4], [27, 5]];
+  for (const [ay, ax] of asteroidBL) {
+    if (ay < size && pic[ay][ax] === 0) pic[ay][ax] = 3;
+  }
+  
+  // Moon bottom-right (gives tile [2,2] content)
+  const moonBR = [[23, 25], [23, 26], [24, 24], [24, 25], [24, 26], [24, 27], [25, 25], [25, 26], [25, 27], [26, 24], [26, 25], [26, 26], [27, 25], [27, 26]];
+  for (const [my, mx] of moonBR) {
+    if (my < size && mx < size && pic[my][mx] === 0) pic[my][mx] = 3;
   }
 
   return pic;
