@@ -31,6 +31,8 @@ export default function App() {
   const [appState, setAppState] = useState(loadAppState);
   const [collectionProgress, setCollectionProgress] = useState(loadCollectionProgress);
   const [activeCollectionGame, setActiveCollectionGame] = useState(null); // { collectionId, tileRow, tileCol }
+  const [homeTab, setHomeTab] = useState('puzzle'); // 'puzzle' | 'collection'
+  const [homeScrollY, setHomeScrollY] = useState(0);
   const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint, clearAutoX, restartLevel } = useGame();
 
   // Apply dark mode on initial load
@@ -113,6 +115,7 @@ export default function App() {
   const handleGoHome = useCallback(() => {
     setScreen('home');
     setActiveCollectionGame(null);
+    // 탭 유지: 컬렉션 게임에서 돌아올 때 컬렉션 탭 유지 (homeTab은 변경 안 함)
   }, []);
 
   const handleNextLevel = useCallback(() => {
@@ -175,6 +178,7 @@ export default function App() {
 
   // 컬렉션 타일 게임 시작
   const handleStartCollectionTile = useCallback((collectionId, tileRow, tileCol) => {
+    setHomeTab('collection'); // 돌아올 때 컬렉션 탭 유지
     setActiveCollectionGame({ collectionId, tileRow, tileCol });
     setScreen('collection-game');
   }, []);
@@ -282,6 +286,10 @@ export default function App() {
         onWatchAd={handleWatchAd}
         onBuyHints={handleBuyHints}
         onStartCollectionTile={handleStartCollectionTile}
+        activeTab={homeTab}
+        onTabChange={setHomeTab}
+        savedScrollY={homeScrollY}
+        onScrollChange={setHomeScrollY}
       />
     </div>
   );

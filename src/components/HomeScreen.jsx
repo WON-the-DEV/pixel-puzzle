@@ -1,4 +1,4 @@
-import { useMemo, useState, useCallback } from 'react';
+import { useMemo, useState, useCallback, useEffect, useRef } from 'react';
 import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel } from '../lib/puzzle.js';
 import CollectionView from './CollectionView.jsx';
 import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, SettingsIcon, GridIcon, VideoIcon, DiamondIcon, DifficultyBadge } from './icons/Icons.jsx';
@@ -28,10 +28,28 @@ function StarsDisplay({ stars }) {
   );
 }
 
-export default function HomeScreen({ appState, collectionProgress, onStartLevel, onOpenSettings, onWatchAd, onBuyHints, onStartCollectionTile }) {
+export default function HomeScreen({ appState, collectionProgress, onStartLevel, onOpenSettings, onWatchAd, onBuyHints, onStartCollectionTile, activeTab: externalTab, onTabChange, savedScrollY, onScrollChange }) {
   const { completedLevels = [], currentLevel = 1, bestTimes = {}, bestStars = {}, hints = 3 } = appState;
   const completedSet = useMemo(() => new Set(completedLevels), [completedLevels]);
-  const [activeTab, setActiveTab] = useState('puzzle');
+  const activeTab = externalTab || 'puzzle';
+  const setActiveTab = onTabChange || (() => {});
+  const bodyRef = useRef(null);
+
+  // 스크롤 위치 복원
+  useEffect(() => {
+    if (bodyRef.current && savedScrollY > 0) {
+      bodyRef.current.scrollTop = savedScrollY;
+    }
+  }, []); // 마운트 시 한번만
+
+  // 스크롤 위치 저장
+  useEffect(() => {
+    const el = bodyRef.current;
+    if (!el || !onScrollChange) return;
+    const handleScroll = () => { onScrollChange(el.scrollTop); };
+    el.addEventListener('scroll', handleScroll, { passive: true });
+    return () => el.removeEventListener('scroll', handleScroll);
+  }, [onScrollChange]);
 
   return (
     <div className="home-screen">
@@ -67,7 +85,7 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
         </button>
       </div>
 
-      <div className="home-body">
+      <div className="home-body" ref={bodyRef}>
         {activeTab === 'puzzle' ? (
           <>
             {/* Stats bar */}

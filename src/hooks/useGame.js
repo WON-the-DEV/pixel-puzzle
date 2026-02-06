@@ -137,28 +137,12 @@ function gameReducer(state, action) {
 
       const newGrid = cloneGrid(state.playerGrid);
 
-      // 드래그 중 fill 모드에서 잘못된 셀 체크
+      // 드래그 중 fill 모드에서 잘못된 셀 → 무시 (라이프 안 깎임)
       if (value === 1) {
         const expected = state.puzzle.solution[row][col];
         if (expected !== 1) {
-          // 드래그 중에는 라이프 감소 + X 표시
-          const newLives = Math.max(0, state.lives - 1);
-          newGrid[row][col] = 2;
-          if (newLives === 0) {
-            return {
-              ...state,
-              playerGrid: newGrid,
-              lives: newLives,
-              isGameOver: true,
-              lostLife: true,
-            };
-          }
-          return {
-            ...state,
-            playerGrid: newGrid,
-            lives: newLives,
-            lostLife: true,
-          };
+          // 드래그 중에는 틀린 셀 건너뜀
+          return state;
         }
       }
 

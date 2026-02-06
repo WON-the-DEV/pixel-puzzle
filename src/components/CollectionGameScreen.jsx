@@ -146,19 +146,15 @@ function gameReducer(state, action) {
       };
     }
     case 'FILL_CELL': {
+      // 드래그 중 호출 — 틀린 셀은 무시 (라이프 안 깎임)
       if (state.isComplete || state.isGameOver) return state;
       const { row, col, value } = action;
       if (state.playerGrid[row][col] === value) return state;
-      const newGrid = cloneGrid(state.playerGrid);
       if (value === 1) {
         const expected = state.puzzle.solution[row][col];
-        if (expected === 0) {
-          const newLives = Math.max(0, state.lives - 1);
-          newGrid[row][col] = 2;
-          if (newLives === 0) return { ...state, playerGrid: newGrid, lives: newLives, isGameOver: true, lostLife: true };
-          return { ...state, playerGrid: newGrid, lives: newLives, lostLife: true };
-        }
+        if (expected === 0) return state; // 드래그 중 틀린 셀 건너뜀
       }
+      const newGrid = cloneGrid(state.playerGrid);
       newGrid[row][col] = value;
       return { ...state, playerGrid: newGrid };
     }
