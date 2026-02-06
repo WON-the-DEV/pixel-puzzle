@@ -2,59 +2,13 @@
  * 노노그램 퍼즐 생성 및 검증
  */
 
-// 프리셋 퍼즐들 (5x5)
-export const PRESET_PUZZLES = [
-  {
-    name: '하트',
-    grid: [
-      [0, 1, 0, 1, 0],
-      [1, 1, 1, 1, 1],
-      [1, 1, 1, 1, 1],
-      [0, 1, 1, 1, 0],
-      [0, 0, 1, 0, 0],
-    ],
-  },
-  {
-    name: '별',
-    grid: [
-      [0, 0, 1, 0, 0],
-      [0, 1, 1, 1, 0],
-      [1, 1, 1, 1, 1],
-      [0, 1, 1, 1, 0],
-      [0, 1, 0, 1, 0],
-    ],
-  },
-  {
-    name: '스마일',
-    grid: [
-      [0, 1, 0, 1, 0],
-      [0, 1, 0, 1, 0],
-      [0, 0, 0, 0, 0],
-      [1, 0, 0, 0, 1],
-      [0, 1, 1, 1, 0],
-    ],
-  },
-  {
-    name: '집',
-    grid: [
-      [0, 0, 1, 0, 0],
-      [0, 1, 1, 1, 0],
-      [1, 1, 1, 1, 1],
-      [1, 1, 0, 1, 1],
-      [1, 1, 0, 1, 1],
-    ],
-  },
-  {
-    name: '고양이',
-    grid: [
-      [1, 0, 0, 0, 1],
-      [1, 1, 1, 1, 1],
-      [1, 0, 1, 0, 1],
-      [1, 1, 1, 1, 1],
-      [0, 1, 0, 1, 0],
-    ],
-  },
-];
+import { HANDMADE_PUZZLES } from './puzzleData.js';
+
+// PRESET_PUZZLES — 기존 코드 호환용 (5x5 핸드메이드 퍼즐 참조)
+export const PRESET_PUZZLES = HANDMADE_PUZZLES['5x5'].map(p => ({
+  name: p.name,
+  grid: p.solution,
+}));
 
 /**
  * 컬렉션 정의
@@ -62,45 +16,44 @@ export const PRESET_PUZZLES = [
  */
 export const COLLECTIONS = [
   {
-    id: 'animals',
-    name: '귀여운 동물',
-    emoji: '🐾',
-    description: '5가지 동물 퍼즐을 완성하세요',
-    color: '#f97316',
-    levels: [1, 2, 3, 4, 5],
-    // 큰 그림: 2x3 그리드 (마지막 하나는 보너스)  
-    gridCols: 3,
-    gridRows: 2,
+    id: 'beginner',
+    name: '입문 마스터',
+    emoji: '🌱',
+    description: '입문 퍼즐 20개를 완성하세요',
+    color: '#10b981',
+    levels: Array.from({ length: 20 }, (_, i) => i + 1),
+    gridCols: 5,
+    gridRows: 4,
   },
   {
-    id: 'beginner',
-    name: '첫 걸음',
+    id: 'easy',
+    name: '초급 도전',
     emoji: '🌟',
-    description: '초급 퍼즐 10개를 정복하세요',
-    color: '#3182f6',
-    levels: [6, 7, 8, 9, 10, 11, 12, 13, 14, 15],
+    description: '초급 퍼즐 20개를 정복하세요',
+    color: '#6C5CE7',
+    levels: Array.from({ length: 20 }, (_, i) => i + 21),
     gridCols: 5,
-    gridRows: 2,
+    gridRows: 4,
   },
   {
     id: 'intermediate',
-    name: '도전자',
+    name: '중급 정복',
     emoji: '💜',
-    description: '중급 퍼즐 15개를 클리어하세요',
+    description: '중급 퍼즐 20개를 클리어하세요',
     color: '#8b5cf6',
-    levels: [16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30],
+    levels: Array.from({ length: 20 }, (_, i) => i + 41),
     gridCols: 5,
-    gridRows: 3,
+    gridRows: 4,
   },
   {
     id: 'master',
     name: '마스터',
     emoji: '🔥',
-    description: '고급 퍼즐 20개를 완성하세요',
+    description: '고급 퍼즐 15개를 완성하세요',
     color: '#ef4444',
-    levels: [31, 32, 33, 34, 35, 36, 37, 38, 39, 40, 41, 42, 43, 44, 45, 46, 47, 48, 49, 50],
+    levels: Array.from({ length: 15 }, (_, i) => i + 61),
     gridCols: 5,
-    gridRows: 4,
+    gridRows: 3,
   },
 ];
 
@@ -170,20 +123,39 @@ export function generateRandomPuzzle(size, seed) {
 }
 
 /**
+ * 핸드메이드 퍼즐 레벨 매핑
+ * 레벨 1-20:  5x5 입문 (20개)
+ * 레벨 21-40: 8x8 초급 (20개)
+ * 레벨 41-60: 10x10 중급 (20개)
+ * 레벨 61-75: 15x15 고급 (15개)
+ */
+const LEVEL_RANGES = [
+  { start: 1,  end: 20, size: 5,  key: '5x5' },
+  { start: 21, end: 40, size: 8,  key: '8x8' },
+  { start: 41, end: 60, size: 10, key: '10x10' },
+  { start: 61, end: 75, size: 15, key: '15x15' },
+];
+
+/**
+ * 총 레벨 수
+ */
+export const TOTAL_LEVELS = 75;
+
+/**
  * 레벨에 따른 퍼즐 크기
  */
 export function getSizeForLevel(level) {
-  if (level <= 5) return 5;
-  if (level <= 15) return 8;
-  if (level <= 30) return 10;
-  return 15;
+  for (const range of LEVEL_RANGES) {
+    if (level >= range.start && level <= range.end) return range.size;
+  }
+  return 15; // fallback
 }
 
 /**
  * 난이도별 첫 레벨인지 확인
  */
 export function isSectionFirstLevel(level) {
-  return level === 1 || level === 6 || level === 16 || level === 31;
+  return LEVEL_RANGES.some(r => r.start === level);
 }
 
 /**
@@ -197,19 +169,23 @@ export function isLevelUnlocked(level, completedLevels) {
 }
 
 /**
- * 레벨에 따른 퍼즐 생성
+ * 레벨에 따른 퍼즐 생성 (핸드메이드 퍼즐 사용)
  */
 export function createPuzzleForLevel(level) {
   const size = getSizeForLevel(level);
   let solution;
   let name = null;
 
-  if (level <= 5) {
-    const preset = PRESET_PUZZLES[(level - 1) % PRESET_PUZZLES.length];
-    solution = preset.grid.map((row) => [...row]);
-    name = preset.name;
+  // 핸드메이드 퍼즐에서 가져오기
+  const range = LEVEL_RANGES.find(r => level >= r.start && level <= r.end);
+  if (range) {
+    const puzzles = HANDMADE_PUZZLES[range.key];
+    const index = (level - range.start) % puzzles.length;
+    const puzzle = puzzles[index];
+    solution = puzzle.solution.map((row) => [...row]);
+    name = puzzle.name;
   } else {
-    // 시드 기반으로 동일한 퍼즐 생성
+    // fallback: 시드 기반 랜덤 생성 (핸드메이드에 없는 레벨용)
     solution = generateRandomPuzzle(size, level * 12345 + 67890);
   }
 

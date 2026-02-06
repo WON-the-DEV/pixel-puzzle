@@ -1,13 +1,13 @@
 import { useMemo, useState, useCallback, useEffect, useRef, memo } from 'react';
-import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel } from '../lib/puzzle.js';
+import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel, TOTAL_LEVELS } from '../lib/puzzle.js';
 import CollectionView from './CollectionView.jsx';
 import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, SettingsIcon, GridIcon, VideoIcon, DiamondIcon, DifficultyBadge } from './icons/Icons.jsx';
 
 const SECTIONS = [
-  { name: '입문', start: 1, end: 5, size: '5×5', color: 'var(--diff-beginner)', colorRaw: '#10B981' },
-  { name: '초급', start: 6, end: 15, size: '8×8', color: 'var(--diff-easy)', colorRaw: '#6C5CE7' },
-  { name: '중급', start: 16, end: 30, size: '10×10', color: 'var(--diff-medium)', colorRaw: '#8B5CF6' },
-  { name: '고급', start: 31, end: 50, size: '15×15', color: 'var(--diff-hard)', colorRaw: '#F97316' },
+  { name: '입문', start: 1, end: 20, size: '5×5', color: 'var(--diff-beginner)', colorRaw: '#10B981' },
+  { name: '초급', start: 21, end: 40, size: '8×8', color: 'var(--diff-easy)', colorRaw: '#6C5CE7' },
+  { name: '중급', start: 41, end: 60, size: '10×10', color: 'var(--diff-medium)', colorRaw: '#8B5CF6' },
+  { name: '고급', start: 61, end: 75, size: '15×15', color: 'var(--diff-hard)', colorRaw: '#F97316' },
 ];
 
 function formatTime(ms) {
@@ -184,11 +184,11 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
                 <span className="stat-label">완료</span>
               </div>
               <div className="stat">
-                <span className="stat-value">{50 - completedLevels.length}</span>
+                <span className="stat-value">{TOTAL_LEVELS - completedLevels.length}</span>
                 <span className="stat-label">남음</span>
               </div>
               <div className="stat">
-                <span className="stat-value">{Math.round((completedLevels.length / 50) * 100)}%</span>
+                <span className="stat-value">{Math.round((completedLevels.length / TOTAL_LEVELS) * 100)}%</span>
                 <span className="stat-label">진행률</span>
               </div>
               <div className="stat">
@@ -260,8 +260,8 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
                         if (isLocked) className += ' locked';
                         if (isCurrent) className += ' current';
 
-                        const presetName =
-                          level <= 5 ? PRESET_PUZZLES[(level - 1) % PRESET_PUZZLES.length].name : null;
+                        const puzzleInfo = puzzleCache[level] || (puzzleCache[level] = createPuzzleForLevel(level));
+                        const presetName = puzzleInfo.name;
 
                         const bestTime = bestTimes[level];
                         const levelStars = bestStars[level];

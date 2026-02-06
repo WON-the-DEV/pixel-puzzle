@@ -7,7 +7,7 @@ import SettingsScreen from './components/SettingsScreen.jsx';
 import { useGame } from './hooks/useGame.js';
 import { loadAppState, saveAppState, loadCollectionProgress, saveCollectionProgress } from './lib/storage.js';
 import { initAudio } from './lib/sound.js';
-import { calculateStars } from './lib/puzzle.js';
+import { calculateStars, TOTAL_LEVELS } from './lib/puzzle.js';
 import { loadSettings } from './lib/settings.js';
 
 function hasSeenTutorial() {
@@ -147,11 +147,11 @@ export default function App() {
   // 모든 퍼즐 해금 (버그 수정: App state를 직접 업데이트)
   const handleUnlockAll = useCallback(() => {
     setAppState((prev) => {
-      const allLevels = Array.from({ length: 50 }, (_, i) => i + 1);
+      const allLevels = Array.from({ length: TOTAL_LEVELS }, (_, i) => i + 1);
       return {
         ...prev,
         completedLevels: allLevels,
-        currentLevel: 51,
+        currentLevel: TOTAL_LEVELS + 1,
       };
     });
     // 설정 화면에서 홈으로 돌아가기
