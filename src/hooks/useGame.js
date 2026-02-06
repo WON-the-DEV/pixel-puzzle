@@ -74,7 +74,7 @@ function gameReducer(state, action) {
           isComplete: false,
           lives: saved.lives != null ? saved.lives : 3,
           maxLives: 3,
-          isGameOver: false,
+          isGameOver: saved.lives != null && saved.lives <= 0,
           autoXCells: [],
           filledCorrect,
           mistakeFlashCells: [],
@@ -362,7 +362,7 @@ export function useGame() {
   useEffect(() => {
     if (!state.puzzle || state.isComplete || state.isGameOver) {
       // 완료/게임오버 시 저장 삭제
-      if (state.isComplete) clearGameSave();
+      if (state.isComplete || state.isGameOver) clearGameSave();
       return;
     }
     // playerGrid가 있을 때만 저장

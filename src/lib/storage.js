@@ -60,6 +60,36 @@ export function clearGameSave() {
   }
 }
 
+// ─── Collection Game Save (in-progress tile) ───
+
+const COLLECTION_GAME_SAVE_KEY = 'nonogram_collection_game_save';
+
+export function loadCollectionGameSave() {
+  try {
+    const saved = localStorage.getItem(COLLECTION_GAME_SAVE_KEY);
+    if (saved) return JSON.parse(saved);
+  } catch (e) {
+    console.error('Failed to load collection game save:', e);
+  }
+  return null;
+}
+
+export function saveCollectionGameProgress(data) {
+  try {
+    localStorage.setItem(COLLECTION_GAME_SAVE_KEY, JSON.stringify(data));
+  } catch (e) {
+    console.error('Failed to save collection game progress:', e);
+  }
+}
+
+export function clearCollectionGameSave() {
+  try {
+    localStorage.removeItem(COLLECTION_GAME_SAVE_KEY);
+  } catch {
+    // ignore
+  }
+}
+
 // ─── Collection Progress ───
 
 const DEFAULT_COLLECTION = {

@@ -2113,30 +2113,25 @@ body {
   justify-content: space-between;
   align-items: center;
   flex: 1;
-  padding: 0 8px;
+  padding: 4px 12px;
+  gap: 20px;
 }
 
-/* Left: D-pad */
+/* Left: D-pad (3x3 grid) */
 .controller-left {
-  display: flex;
-  flex-direction: column;
-  gap: 1px;
+  flex: 0 0 auto;
 }
 
-.dpad-row {
-  display: flex;
-  gap: 1px;
-  justify-content: center;
-}
-
-.dpad-spacer {
-  width: 46px;
-  height: 46px;
+.dpad-grid {
+  display: grid;
+  grid-template-columns: repeat(3, 44px);
+  grid-template-rows: repeat(3, 44px);
+  gap: 2px;
 }
 
 .dpad-btn {
-  width: 46px;
-  height: 46px;
+  width: 44px;
+  height: 44px;
   border: none;
   border-radius: var(--radius-sm);
   background: var(--bg);
@@ -2157,73 +2152,72 @@ body {
 }
 
 .dpad-center-dot {
-  width: 46px;
-  height: 46px;
   display: flex;
   align-items: center;
   justify-content: center;
 }
 .dpad-center-dot::after {
   content: '';
-  width: 6px;
-  height: 6px;
+  width: 8px;
+  height: 8px;
   border-radius: 50%;
-  background: var(--text-tertiary);
+  background: var(--text-secondary);
+  opacity: 0.3;
 }
 
 /* Right: Action buttons */
 .controller-right {
   display: flex;
   flex-direction: column;
-  gap: 10px;
+  gap: 8px;
   align-items: center;
 }
 
 .action-btn {
-  width: 64px;
-  height: 64px;
-  border-radius: 50%;
-  border: 2px solid;
+  width: 80px;
+  height: 50px;
+  border-radius: 12px;
+  border: 2px solid var(--border);
+  background: var(--bg-card);
   display: flex;
-  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 4px;
   cursor: pointer;
   transition: all 0.1s;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
-  gap: 2px;
 }
 
 .action-btn-label {
-  font-size: 9px;
+  font-size: 13px;
   font-weight: 600;
   letter-spacing: -0.3px;
 }
 
 .action-fill {
-  background: var(--accent-light);
   border-color: var(--accent);
   color: var(--accent);
 }
 .action-fill:active {
   background: var(--accent);
   color: white;
-  transform: scale(0.92);
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 .action-fill:active svg path {
   stroke: white;
 }
 
 .action-mark {
-  background: var(--danger-light);
   border-color: var(--danger);
   color: var(--danger);
 }
 .action-mark:active {
   background: var(--danger);
   color: white;
-  transform: scale(0.92);
+  transform: scale(0.95);
+  opacity: 0.8;
 }
 .action-mark:active svg path {
   stroke: white;

@@ -3,6 +3,7 @@ import { COLLECTION_DATA, createCollectionPuzzle, checkMonoSolution } from '../l
 import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint, playLifeLost, playGameOver, playAutoX } from '../lib/sound.js';
 import { hapticFill, hapticLineComplete, hapticPuzzleComplete, hapticLifeLost, hapticGameOver } from '../lib/haptic.js';
 import { BackIcon, HeartIcon, LightbulbIcon, PencilIcon, XMarkIcon, VideoIcon, TouchIcon, ControllerIcon } from './icons/Icons.jsx';
+import { loadCollectionGameSave, saveCollectionGameProgress, clearCollectionGameSave } from '../lib/storage.js';
 import ControllerPad from './ControllerPad.jsx';
 
 function formatTime(ms) {
@@ -98,7 +99,28 @@ const INITIAL_STATE = {
 function gameReducer(state, action) {
   switch (action.type) {
     case 'START': {
-      const { puzzle } = action;
+      const { puzzle, collectionId, tileRow, tileCol } = action;
+
+      // 저장된 진행 상황 복원 시도
+      const saved = loadCollectionGameSave();
+      if (saved && saved.collectionId === collectionId && saved.tileRow === tileRow && saved.tileCol === tileCol && saved.playerGrid) {
+        const filledCorrect = getFilledCorrectCount(puzzle.solution, saved.playerGrid);
+        return {
+          ...INITIAL_STATE,
+          puzzle,
+          playerGrid: saved.playerGrid,
+          mode: saved.mode || 'fill',
+          history: [cloneGrid(saved.playerGrid)],
+          historyIndex: 0,
+          startTime: Date.now() - (saved.elapsedTime || 0),
+          elapsedTime: saved.elapsedTime || 0,
+          lives: saved.lives != null ? saved.lives : 3,
+          isGameOver: saved.lives != null && saved.lives <= 0,
+          filledCorrect,
+          usedRevive: saved.usedRevive || false,
+        };
+      }
+
       const playerGrid = createEmptyGrid(puzzle.size);
 
       for (let i = 0; i < puzzle.size; i++) {
@@ -237,6 +259,7 @@ function gameReducer(state, action) {
     }
     case 'RESTART': {
       if (!state.puzzle) return state;
+      clearCollectionGameSave();
       const puzzle = state.puzzle;
       const playerGrid = createEmptyGrid(puzzle.size);
 
@@ -635,7 +658,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   useEffect(() => {
     if (!collection) return;
     const puzzle = createCollectionPuzzle(collection, tileRow, tileCol);
-    dispatch({ type: 'START', puzzle });
+    dispatch({ type: 'START', puzzle, collectionId, tileRow, tileCol });
     setCursorRow(0);
     setCursorCol(0);
   }, [collection, tileRow, tileCol]);
@@ -669,6 +692,26 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   useEffect(() => {
     if (state.isGameOver) { playGameOver(); hapticGameOver(); }
   }, [state.isGameOver]);
+
+  // 자동 저장: 게임 진행 중 셀 변경 시
+  useEffect(() => {
+    if (!state.puzzle || state.isComplete || state.isGameOver) {
+      if (state.isComplete || state.isGameOver) clearCollectionGameSave();
+      return;
+    }
+    if (state.playerGrid && state.playerGrid.length > 0) {
+      saveCollectionGameProgress({
+        collectionId,
+        tileRow,
+        tileCol,
+        playerGrid: state.playerGrid,
+        mode: state.mode,
+        lives: state.lives,
+        elapsedTime: state.startTime ? Date.now() - state.startTime : 0,
+        usedRevive: state.usedRevive,
+      });
+    }
+  }, [state.playerGrid, state.isComplete, state.isGameOver, state.lives, state.mode, collectionId, tileRow, tileCol]);
 
   const handleToggleCell = useCallback((row, col) => {
     if (state.isComplete || state.isGameOver) return;
