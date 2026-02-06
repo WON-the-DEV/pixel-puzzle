@@ -31,10 +31,10 @@ function HintModal({ hints, onWatchAd, onBuyHints, onClose }) {
 }
 
 const SECTIONS = [
-  { name: '입문', start: 1, end: 20, size: '5×5', color: 'var(--diff-beginner)', colorRaw: '#10B981' },
-  { name: '초급', start: 21, end: 40, size: '8×8', color: 'var(--diff-easy)', colorRaw: '#6C5CE7' },
-  { name: '중급', start: 41, end: 60, size: '10×10', color: 'var(--diff-medium)', colorRaw: '#8B5CF6' },
-  { name: '고급', start: 61, end: 75, size: '15×15', color: 'var(--diff-hard)', colorRaw: '#F97316' },
+  { name: '입문', start: 1, end: 30, size: '5×5', color: 'var(--diff-beginner)', colorRaw: '#10B981' },
+  { name: '초급', start: 31, end: 60, size: '8×8', color: 'var(--diff-easy)', colorRaw: '#6C5CE7' },
+  { name: '중급', start: 61, end: 95, size: '10×10', color: 'var(--diff-medium)', colorRaw: '#8B5CF6' },
+  { name: '고급', start: 96, end: 120, size: '15×15', color: 'var(--diff-hard)', colorRaw: '#F97316' },
 ];
 
 function formatTime(ms) {

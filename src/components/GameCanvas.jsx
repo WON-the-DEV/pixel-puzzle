@@ -4,21 +4,22 @@ import { isRowComplete, isColComplete } from '../lib/puzzle.js';
 function getColors() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
   return {
-    bg: isDark ? '#1E2A45' : '#ffffff',
-    grid: isDark ? '#2D3A56' : '#E5E7EB',
+    bg: isDark ? '#1a1a2e' : '#ffffff',
+    grid: isDark ? '#3a3a4e' : '#E5E7EB',
     gridBold: isDark ? '#64748B' : '#9CA3AF',
-    cellFilled: isDark ? '#E2E8F0' : '#1B2838',
-    clueText: isDark ? '#E2E8F0' : '#1A1A2E',
+    cellFilled: isDark ? '#e0e0e0' : '#1B2838',
+    clueText: isDark ? '#d0d0d0' : '#1A1A2E',
     clueComplete: isDark ? '#475569' : '#D1D5DB',
     highlight: '#6C5CE7',
-    highlightBg: isDark ? 'rgba(124, 108, 240, 0.12)' : 'rgba(108, 92, 231, 0.08)',
+    highlightBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(108, 92, 231, 0.08)',
+    touchHighlightBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(108, 92, 231, 0.05)',
     completedRowBg: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.10)',
     mistakeBg: 'rgba(239, 68, 68, 0.25)',
-    mistakeBorder: '#ef4444',
+    mistakeBorder: isDark ? '#ff6b6b' : '#ef4444',
     autoXMark: '#6C5CE7',
-    xMark: isDark ? '#64748B' : '#C0C4CC',
+    xMark: isDark ? '#888888' : '#C0C4CC',
     cursorBorder: '#FF6B6B',
-    cursorBg: isDark ? 'rgba(255, 107, 107, 0.15)' : 'rgba(255, 107, 107, 0.12)',
+    cursorBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 107, 107, 0.12)',
   };
 }
 
@@ -52,6 +53,7 @@ export default function GameCanvas({
     isLongPress: false,
   });
   const highlightRef = useRef({ row: -1, col: -1 });
+  const lastTouchRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
   const mistakeFlashRef = useRef(new Set());
@@ -144,6 +146,9 @@ export default function GameCanvas({
     // In controller mode, use cursor position for highlight
     const hRow = controllerMode ? cursorRow : highlightRef.current.row;
     const hCol = controllerMode ? cursorCol : highlightRef.current.col;
+    // Touch mode last-touch highlight (persistent, lighter)
+    const ltRow = lastTouchRef.current.row;
+    const ltCol = lastTouchRef.current.col;
 
     // Completed row/col background tint
     for (let i = 0; i < size; i++) {
@@ -159,7 +164,17 @@ export default function GameCanvas({
       }
     }
 
-    // Row highlight strip
+    // Touch mode last-touch highlight (lighter than controller)
+    if (!controllerMode && hRow < 0 && ltRow >= 0) {
+      ctx.fillStyle = COLORS.touchHighlightBg;
+      ctx.fillRect(0, offsetY + ltRow * cellSize, width, cellSize);
+    }
+    if (!controllerMode && hCol < 0 && ltCol >= 0) {
+      ctx.fillStyle = COLORS.touchHighlightBg;
+      ctx.fillRect(offsetX + ltCol * cellSize, 0, cellSize, height);
+    }
+
+    // Row highlight strip (active touch/controller)
     if (hRow >= 0) {
       ctx.fillStyle = COLORS.highlightBg;
       ctx.fillRect(0, offsetY + hRow * cellSize, width, cellSize);
@@ -187,9 +202,15 @@ export default function GameCanvas({
       const complete = isRowComplete(puzzle.rowClues, playerGrid, i);
       const y = offsetY + i * cellSize + cellSize / 2;
       ctx.font = clueFont;
-      ctx.fillStyle = complete ? COLORS.clueComplete : (i === hRow ? COLORS.highlight : COLORS.clueText);
-      if (complete && i === hRow) ctx.fillStyle = COLORS.clueComplete;
+      if (complete) {
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#aaaaaa';
+      } else {
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = i === hRow ? COLORS.highlight : COLORS.clueText;
+      }
       ctx.fillText(clues.join(' '), padding + clueWidth / 2, y);
+      ctx.globalAlpha = 1.0;
     });
 
     // Col clues (top)
@@ -198,12 +219,18 @@ export default function GameCanvas({
       const complete = isColComplete(puzzle.colClues, playerGrid, j);
       const x = offsetX + j * cellSize + cellSize / 2;
       ctx.font = clueFont;
-      const baseColor = complete ? COLORS.clueComplete : (j === hCol ? COLORS.highlight : COLORS.clueText);
-      ctx.fillStyle = complete && j === hCol ? COLORS.clueComplete : baseColor;
+      if (complete) {
+        ctx.globalAlpha = 0.4;
+        ctx.fillStyle = '#aaaaaa';
+      } else {
+        ctx.globalAlpha = 1.0;
+        ctx.fillStyle = j === hCol ? COLORS.highlight : COLORS.clueText;
+      }
       clues.forEach((clue, k) => {
         const y = padding + clueHeight - (clues.length - k) * colClueLineHeight + colClueLineHeight / 2;
         ctx.fillText(clue.toString(), x, y);
       });
+      ctx.globalAlpha = 1.0;
     });
 
     // ── Grid lines ──
@@ -363,6 +390,7 @@ export default function GameCanvas({
       interaction.isLongPress = false;
 
       highlightRef.current = { row: cell.row, col: cell.col };
+      lastTouchRef.current = { row: cell.row, col: cell.col };
       render();
     },
     [getCellAt, isComplete, render, controllerMode]

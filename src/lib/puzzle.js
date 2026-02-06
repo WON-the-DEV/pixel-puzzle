@@ -19,41 +19,41 @@ export const COLLECTIONS = [
     id: 'beginner',
     name: '입문 마스터',
     emoji: '🌱',
-    description: '입문 퍼즐 20개를 완성하세요',
+    description: '입문 퍼즐 30개를 완성하세요',
     color: '#10b981',
-    levels: Array.from({ length: 20 }, (_, i) => i + 1),
-    gridCols: 5,
-    gridRows: 4,
+    levels: Array.from({ length: 30 }, (_, i) => i + 1),
+    gridCols: 6,
+    gridRows: 5,
   },
   {
     id: 'easy',
     name: '초급 도전',
     emoji: '🌟',
-    description: '초급 퍼즐 20개를 정복하세요',
+    description: '초급 퍼즐 30개를 정복하세요',
     color: '#6C5CE7',
-    levels: Array.from({ length: 20 }, (_, i) => i + 21),
-    gridCols: 5,
-    gridRows: 4,
+    levels: Array.from({ length: 30 }, (_, i) => i + 31),
+    gridCols: 6,
+    gridRows: 5,
   },
   {
     id: 'intermediate',
     name: '중급 정복',
     emoji: '💜',
-    description: '중급 퍼즐 20개를 클리어하세요',
+    description: '중급 퍼즐 35개를 클리어하세요',
     color: '#8b5cf6',
-    levels: Array.from({ length: 20 }, (_, i) => i + 41),
-    gridCols: 5,
-    gridRows: 4,
+    levels: Array.from({ length: 35 }, (_, i) => i + 61),
+    gridCols: 7,
+    gridRows: 5,
   },
   {
     id: 'master',
     name: '마스터',
     emoji: '🔥',
-    description: '고급 퍼즐 15개를 완성하세요',
+    description: '고급 퍼즐 25개를 완성하세요',
     color: '#ef4444',
-    levels: Array.from({ length: 15 }, (_, i) => i + 61),
+    levels: Array.from({ length: 25 }, (_, i) => i + 96),
     gridCols: 5,
-    gridRows: 3,
+    gridRows: 5,
   },
 ];
 
@@ -130,16 +130,16 @@ export function generateRandomPuzzle(size, seed) {
  * 레벨 61-75: 15x15 고급 (15개)
  */
 const LEVEL_RANGES = [
-  { start: 1,  end: 20, size: 5,  key: '5x5' },
-  { start: 21, end: 40, size: 8,  key: '8x8' },
-  { start: 41, end: 60, size: 10, key: '10x10' },
-  { start: 61, end: 75, size: 15, key: '15x15' },
+  { start: 1,  end: 30, size: 5,  key: '5x5' },
+  { start: 31, end: 60, size: 8,  key: '8x8' },
+  { start: 61, end: 95, size: 10, key: '10x10' },
+  { start: 96, end: 120, size: 15, key: '15x15' },
 ];
 
 /**
  * 총 레벨 수
  */
-export const TOTAL_LEVELS = 75;
+export const TOTAL_LEVELS = 120;
 
 /**
  * 레벨에 따른 퍼즐 크기
