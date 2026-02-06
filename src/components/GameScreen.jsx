@@ -335,6 +335,7 @@ export default function GameScreen({
           stars={stars}
           onHome={onGoHome}
           onNext={onNextLevel}
+          puzzle={puzzle}
         />
       )}
 

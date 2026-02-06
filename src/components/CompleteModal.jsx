@@ -7,7 +7,51 @@ function formatTime(ms) {
   return `${mins.toString().padStart(2, '0')}:${secs.toString().padStart(2, '0')}`;
 }
 
-export default function CompleteModal({ level, time, puzzleName, stars = 0, onHome, onNext }) {
+function getSizeColor(size) {
+  if (size <= 5) return '#22c55e';
+  if (size <= 8) return '#6c5ce7';
+  if (size <= 10) return '#a855f7';
+  return '#f97316';
+}
+
+function PixelArt({ solution, size }) {
+  const color = getSizeColor(size);
+  const maxPx = 160;
+  const cellPx = Math.floor(maxPx / size);
+  const actualSize = cellPx * size;
+
+  return (
+    <div
+      className="pixel-art-preview"
+      style={{
+        display: 'grid',
+        gridTemplateColumns: `repeat(${size}, ${cellPx}px)`,
+        gridTemplateRows: `repeat(${size}, ${cellPx}px)`,
+        width: actualSize,
+        height: actualSize,
+        borderRadius: 8,
+        overflow: 'hidden',
+        margin: '0 auto 12px',
+        boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+      }}
+    >
+      {solution.map((row, i) =>
+        row.map((cell, j) => (
+          <div
+            key={`${i}-${j}`}
+            style={{
+              width: cellPx,
+              height: cellPx,
+              background: cell === 1 ? color : 'var(--bg)',
+            }}
+          />
+        ))
+      )}
+    </div>
+  );
+}
+
+export default function CompleteModal({ level, time, puzzleName, stars = 0, onHome, onNext, puzzle }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <div className="modal-content">
@@ -16,6 +60,11 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
         </div>
         <h2>퍼즐 완료!</h2>
         {puzzleName && <p className="puzzle-complete-name">{puzzleName}</p>}
+
+        {/* 완성된 픽셀 아트 */}
+        {puzzle && puzzle.solution && (
+          <PixelArt solution={puzzle.solution} size={puzzle.size} />
+        )}
 
         {/* 별점 */}
         {stars > 0 && (

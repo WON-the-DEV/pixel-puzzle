@@ -3,6 +3,33 @@ import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel,
 import CollectionView from './CollectionView.jsx';
 import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, SettingsIcon, GridIcon, VideoIcon, DiamondIcon, DifficultyBadge } from './icons/Icons.jsx';
 
+// Hint modal component
+function HintModal({ hints, onWatchAd, onBuyHints, onClose }) {
+  return (
+    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+      <div className="modal-content">
+        <h2 style={{ marginBottom: 8 }}>💡 힌트 충전</h2>
+        <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
+          현재 힌트: <strong style={{ color: 'var(--accent)' }}>{hints}개</strong>
+        </p>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
+          <button className="hint-modal-btn" onClick={() => { onWatchAd(); onClose(); }}>
+            <span className="hint-modal-btn-icon"><VideoIcon size={20} color="var(--accent)" /></span>
+            <span className="hint-modal-btn-text">광고 보기</span>
+            <span className="hint-modal-btn-reward">+1</span>
+          </button>
+          <button className="hint-modal-btn" onClick={() => { onBuyHints(); onClose(); }}>
+            <span className="hint-modal-btn-icon"><DiamondIcon size={20} color="var(--accent)" /></span>
+            <span className="hint-modal-btn-text">힌트 구매</span>
+            <span className="hint-modal-btn-reward">+5</span>
+          </button>
+        </div>
+        <button className="secondary-btn" onClick={onClose} style={{ width: '100%' }}>닫기</button>
+      </div>
+    </div>
+  );
+}
+
 const SECTIONS = [
   { name: '입문', start: 1, end: 20, size: '5×5', color: 'var(--diff-beginner)', colorRaw: '#10B981' },
   { name: '초급', start: 21, end: 40, size: '8×8', color: 'var(--diff-easy)', colorRaw: '#6C5CE7' },
@@ -91,6 +118,7 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
   const activeTab = externalTab || 'puzzle';
   const setActiveTab = onTabChange || (() => {});
   const bodyRef = useRef(null);
+  const [showHintModal, setShowHintModal] = useState(false);
 
   // Accordion state: determine which sections should be open by default
   const getDefaultOpenSections = useCallback(() => {
@@ -177,51 +205,15 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
       <div className="home-body" ref={bodyRef}>
         {activeTab === 'puzzle' ? (
           <>
-            {/* Stats bar */}
-            <div className="stats-bar">
-              <div className="stat">
-                <span className="stat-value">{completedLevels.length}</span>
-                <span className="stat-label">완료</span>
-              </div>
-              <div className="stat">
-                <span className="stat-value">{TOTAL_LEVELS - completedLevels.length}</span>
-                <span className="stat-label">남음</span>
-              </div>
-              <div className="stat">
-                <span className="stat-value">{Math.round((completedLevels.length / TOTAL_LEVELS) * 100)}%</span>
-                <span className="stat-label">진행률</span>
-              </div>
-              <div className="stat">
-                <span className="stat-value">
-                  <LightbulbIcon size={18} color="var(--accent)" />
-                  {hints}
-                </span>
-                <span className="stat-label">힌트</span>
-              </div>
-            </div>
-
-            {/* Hint shop */}
-            <div className="hint-shop">
-              <div className="hint-shop-title">
+            {/* Compact stats line */}
+            <div className="stats-line">
+              <span className="stats-line-text">
+                {TOTAL_LEVELS} 퍼즐 · {Math.round((completedLevels.length / TOTAL_LEVELS) * 100)}% 완료
+              </span>
+              <button className="stats-line-hint" onClick={() => setShowHintModal(true)}>
                 <LightbulbIcon size={16} color="var(--accent)" />
-                힌트 충전
-              </div>
-              <div className="hint-shop-buttons">
-                <button className="hint-shop-btn" onClick={onWatchAd}>
-                  <span className="hint-shop-btn-icon">
-                    <VideoIcon size={18} color="var(--accent)" />
-                  </span>
-                  <span className="hint-shop-btn-text">광고 보기</span>
-                  <span className="hint-shop-btn-reward">+1</span>
-                </button>
-                <button className="hint-shop-btn" onClick={onBuyHints}>
-                  <span className="hint-shop-btn-icon">
-                    <DiamondIcon size={18} color="var(--accent)" />
-                  </span>
-                  <span className="hint-shop-btn-text">힌트 구매</span>
-                  <span className="hint-shop-btn-reward">+5</span>
-                </button>
-              </div>
+                <span>{hints}</span>
+              </button>
             </div>
 
             {/* Level sections — accordion */}
@@ -323,6 +315,16 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
           <span className="home-nav-label">설정</span>
         </div>
       </nav>
+
+      {/* Hint Modal */}
+      {showHintModal && (
+        <HintModal
+          hints={hints}
+          onWatchAd={onWatchAd}
+          onBuyHints={onBuyHints}
+          onClose={() => setShowHintModal(false)}
+        />
+      )}
     </div>
   );
 }

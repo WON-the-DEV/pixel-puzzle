@@ -180,7 +180,12 @@ function gameReducer(state, action) {
         }
       }
       newGrid[row][col] = value;
-      return { ...state, playerGrid: newGrid };
+
+      // 자동 X 채우기 (드래그 중에도 즉시 반영)
+      const { grid: autoGridFill, autoFilledCells: autoFilledFill } = autoFillCompleted(state.puzzle.solution, newGrid);
+      const filledCorrectFill = getFilledCorrectCount(state.puzzle.solution, autoGridFill);
+
+      return { ...state, playerGrid: autoGridFill, autoXCells: autoFilledFill, filledCorrect: filledCorrectFill };
     }
     case 'END_DRAG': {
       if (state.isGameOver) return state;
@@ -798,6 +803,34 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
             <div className="modal-icon" style={{ fontSize: 56 }}>{collection.emoji}</div>
             <h2>타일 완료!</h2>
             <p className="puzzle-complete-name">{collection.name} #{tileNumber}</p>
+            {/* 완성된 픽셀 아트 */}
+            {state.puzzle && state.puzzle.solution && (() => {
+              const size = state.puzzle.size;
+              const color = size <= 5 ? '#22c55e' : size <= 8 ? '#6c5ce7' : size <= 10 ? '#a855f7' : '#f97316';
+              const maxPx = 160;
+              const cellPx = Math.floor(maxPx / size);
+              const actualSize = cellPx * size;
+              return (
+                <div style={{
+                  display: 'grid',
+                  gridTemplateColumns: `repeat(${size}, ${cellPx}px)`,
+                  gridTemplateRows: `repeat(${size}, ${cellPx}px)`,
+                  width: actualSize, height: actualSize,
+                  borderRadius: 8, overflow: 'hidden',
+                  margin: '0 auto 12px',
+                  boxShadow: '0 4px 16px rgba(0,0,0,0.12)',
+                }}>
+                  {state.puzzle.solution.map((row, i) =>
+                    row.map((cell, j) => (
+                      <div key={`${i}-${j}`} style={{
+                        width: cellPx, height: cellPx,
+                        background: cell === 1 || cell > 0 ? color : 'var(--bg)',
+                      }} />
+                    ))
+                  )}
+                </div>
+              );
+            })()}
             <div className="result-stats">
               <div className="result-stat">
                 <span className="result-stat-value">{state.puzzle.size}×{state.puzzle.size}</span>

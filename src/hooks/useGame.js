@@ -180,7 +180,12 @@ function gameReducer(state, action) {
         }
       }
       newGrid[row][col] = value;
-      return { ...state, playerGrid: newGrid };
+
+      // 자동 X 채우기 (드래그 중에도 즉시 반영)
+      const { newGrid: autoGridFill, autoFilledCells: autoFilledFill } = processAutoFill(state, newGrid);
+      const filledCorrectFill = getFilledCorrectCount(state.puzzle.solution, autoGridFill);
+
+      return { ...state, playerGrid: autoGridFill, autoXCells: autoFilledFill, filledCorrect: filledCorrectFill };
     }
 
     case 'END_DRAG': {
