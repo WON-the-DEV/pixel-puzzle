@@ -1860,53 +1860,6 @@ body {
   height: 100%;
 }
 
-.canvas-wrapper.zoomable {
-  overflow: hidden;
-  touch-action: none;
-}
-
-.zoom-indicator {
-  position: absolute;
-  top: 8px;
-  right: 8px;
-  background: rgba(0, 0, 0, 0.65);
-  color: white;
-  font-size: 11px;
-  font-weight: 700;
-  padding: 4px 10px;
-  border-radius: var(--radius-md);
-  pointer-events: none;
-  animation: zoomFadeIn 0.2s ease;
-  backdrop-filter: blur(4px);
-}
-
-.zoom-hint {
-  position: absolute;
-  bottom: 8px;
-  left: 50%;
-  transform: translateX(-50%);
-  background: rgba(0, 0, 0, 0.55);
-  color: rgba(255, 255, 255, 0.85);
-  font-size: 11px;
-  font-weight: 600;
-  padding: 4px 12px;
-  border-radius: var(--radius-md);
-  pointer-events: none;
-  white-space: nowrap;
-  backdrop-filter: blur(4px);
-  animation: zoomHintFade 4s ease both;
-}
-
-@keyframes zoomHintFade {
-  0%, 60% { opacity: 1; }
-  100% { opacity: 0; }
-}
-
-@keyframes zoomFadeIn {
-  from { opacity: 0; transform: scale(0.9); }
-  to { opacity: 1; transform: scale(1); }
-}
-
 /* ═══════════════════════════════════════
    Collection View — Redesigned (Luna Story BIG)
    ═══════════════════════════════════════ */
@@ -2089,4 +2042,160 @@ body {
   .game-container {
     padding: 2px 2px;
   }
+}
+
+/* ═══════════════════════════════════════
+   Controller Pad
+   ═══════════════════════════════════════ */
+
+.controller-controls {
+  padding: 6px 8px calc(8px + var(--safe-bottom));
+}
+
+.controller-controls-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 4px;
+}
+
+.controller-pad {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  flex: 1;
+}
+
+.controller-dpad {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.dpad-row {
+  display: flex;
+  gap: 2px;
+  justify-content: center;
+}
+
+.dpad-spacer {
+  width: 52px;
+  height: 52px;
+}
+
+.dpad-btn {
+  width: 52px;
+  height: 52px;
+  border: none;
+  border-radius: var(--radius-md);
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  cursor: pointer;
+  transition: all 0.1s;
+  -webkit-tap-highlight-color: transparent;
+  touch-action: manipulation;
+  box-shadow: var(--shadow-sm);
+  border: 1px solid var(--border-light);
+}
+
+.dpad-btn:active {
+  background: var(--border-light);
+  transform: scale(0.92);
+}
+
+.dpad-center {
+  background: var(--accent-light);
+  border-color: var(--accent);
+  border-width: 1.5px;
+}
+
+.dpad-center:active {
+  background: var(--accent);
+}
+
+.dpad-center:active svg path {
+  stroke: white;
+}
+
+.dpad-mark {
+  background: var(--danger-light);
+  border-color: var(--danger);
+  border-width: 1.5px;
+}
+
+.dpad-mark:active {
+  background: var(--danger);
+}
+
+.dpad-mark:active svg path {
+  stroke: white;
+}
+
+.mode-switch-btn {
+  flex-shrink: 0;
+}
+
+/* ═══════════════════════════════════════
+   Accordion Level Sections
+   ═══════════════════════════════════════ */
+
+.section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  cursor: pointer;
+  padding: 6px 0;
+  -webkit-tap-highlight-color: transparent;
+  user-select: none;
+}
+
+.section-header-left {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.section-progress-text {
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--text-tertiary);
+  font-variant-numeric: tabular-nums;
+}
+
+.section-chevron {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  width: 24px;
+  height: 24px;
+  color: var(--text-tertiary);
+  transition: transform 0.25s cubic-bezier(0.25, 0.46, 0.45, 0.94);
+}
+
+.section-chevron.open {
+  transform: rotate(180deg);
+}
+
+.section-body {
+  overflow: hidden;
+  transition: max-height 0.3s cubic-bezier(0.25, 0.46, 0.45, 0.94), opacity 0.25s ease;
+}
+
+.section-body.collapsed {
+  max-height: 0;
+  opacity: 0;
+  pointer-events: none;
+}
+
+.section-body.expanded {
+  max-height: 1000px;
+  opacity: 1;
 }

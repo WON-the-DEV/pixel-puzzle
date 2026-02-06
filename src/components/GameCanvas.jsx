@@ -17,6 +17,8 @@ function getColors() {
     mistakeBorder: '#ef4444',
     autoXMark: '#6C5CE7',
     xMark: isDark ? '#64748B' : '#C0C4CC',
+    cursorBorder: '#FF6B6B',
+    cursorBg: isDark ? 'rgba(255, 107, 107, 0.15)' : 'rgba(255, 107, 107, 0.12)',
   };
 }
 
@@ -32,6 +34,9 @@ export default function GameCanvas({
   isComplete,
   autoXCells = [],
   mistakeFlashCells = [],
+  controllerMode = false,
+  cursorRow = 0,
+  cursorCol = 0,
 }) {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -50,29 +55,6 @@ export default function GameCanvas({
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
   const mistakeFlashRef = useRef(new Set());
-
-  // Zoom/pan state for large puzzles
-  const zoomRef = useRef({
-    scale: 1,
-    offsetX: 0,
-    offsetY: 0,
-    isPinching: false,
-    startDist: 0,
-    startScale: 1,
-    startMidX: 0,
-    startMidY: 0,
-    startOffsetX: 0,
-    startOffsetY: 0,
-    // For single-finger panning when zoomed
-    isPanning: false,
-    panStartX: 0,
-    panStartY: 0,
-    panStartOffsetX: 0,
-    panStartOffsetY: 0,
-  });
-  const [zoomLevel, setZoomLevel] = useState(1);
-
-  const needsZoom = puzzle && puzzle.size >= 10;
 
   // Mistake flash animation
   useEffect(() => {
@@ -159,7 +141,9 @@ export default function GameCanvas({
     ctx.fillStyle = COLORS.bg;
     ctx.fillRect(0, 0, width, height);
 
-    const { row: hRow, col: hCol } = highlightRef.current;
+    // In controller mode, use cursor position for highlight
+    const hRow = controllerMode ? cursorRow : highlightRef.current.row;
+    const hCol = controllerMode ? cursorCol : highlightRef.current.col;
 
     // Completed row/col background tint
     for (let i = 0; i < size; i++) {
@@ -190,7 +174,6 @@ export default function GameCanvas({
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
 
-    // Unified clue font size based on puzzle size (not clue count)
     let clueFontSize;
     if (size <= 5) clueFontSize = 12;
     else if (size <= 8) clueFontSize = 11;
@@ -300,7 +283,22 @@ export default function GameCanvas({
         }
       }
     }
-  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells]);
+
+    // ── Controller mode cursor ──
+    if (controllerMode && cursorRow >= 0 && cursorRow < size && cursorCol >= 0 && cursorCol < size) {
+      const cx = offsetX + cursorCol * cellSize;
+      const cy = offsetY + cursorRow * cellSize;
+
+      // Cursor background highlight
+      ctx.fillStyle = COLORS.cursorBg;
+      ctx.fillRect(cx + 1, cy + 1, cellSize - 2, cellSize - 2);
+
+      // Thick border
+      ctx.strokeStyle = COLORS.cursorBorder;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
+    }
+  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol]);
 
   useEffect(() => {
     render();
@@ -324,22 +322,9 @@ export default function GameCanvas({
     const layout = layoutRef.current;
     if (!canvas || !layout) return null;
 
-    const zoom = zoomRef.current;
-    const wrapper = wrapperRef.current;
-    let x, y;
-
-    if (wrapper && needsZoom && zoom.scale > 1) {
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const rawX = clientX - wrapperRect.left;
-      const rawY = clientY - wrapperRect.top;
-      // Reverse the transform: translate then scale
-      x = (rawX - zoom.offsetX) / zoom.scale;
-      y = (rawY - zoom.offsetY) / zoom.scale;
-    } else {
-      const rect = canvas.getBoundingClientRect();
-      x = clientX - rect.left;
-      y = clientY - rect.top;
-    }
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
     const col = Math.floor((x - layout.offsetX) / layout.cellSize);
     const row = Math.floor((y - layout.offsetY) / layout.cellSize);
@@ -347,127 +332,7 @@ export default function GameCanvas({
       return { row, col };
     }
     return null;
-  }, [needsZoom]);
-
-  const getTouchDist = (touches) => {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  const getTouchMid = (touches) => {
-    return {
-      x: (touches[0].clientX + touches[1].clientX) / 2,
-      y: (touches[0].clientY + touches[1].clientY) / 2,
-    };
-  };
-
-  const clampOffset = useCallback(() => {
-    const zoom = zoomRef.current;
-    const wrapper = wrapperRef.current;
-    const canvas = canvasRef.current;
-    if (!wrapper || !canvas) return;
-
-    const wRect = wrapper.getBoundingClientRect();
-    const cW = canvas.offsetWidth * zoom.scale;
-    const cH = canvas.offsetHeight * zoom.scale;
-
-    // Allow panning so the canvas edges stay within or at the wrapper edges
-    if (cW <= wRect.width) {
-      zoom.offsetX = (wRect.width - cW) / 2;
-    } else {
-      zoom.offsetX = Math.min(0, Math.max(wRect.width - cW, zoom.offsetX));
-    }
-
-    if (cH <= wRect.height) {
-      zoom.offsetY = (wRect.height - cH) / 2;
-    } else {
-      zoom.offsetY = Math.min(0, Math.max(wRect.height - cH, zoom.offsetY));
-    }
   }, []);
-
-  const applyTransform = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const zoom = zoomRef.current;
-    if (zoom.scale > 1) {
-      canvas.style.transform = `translate(${zoom.offsetX}px, ${zoom.offsetY}px) scale(${zoom.scale})`;
-      canvas.style.transformOrigin = '0 0';
-    } else {
-      canvas.style.transform = '';
-      canvas.style.transformOrigin = 'center center';
-    }
-  }, []);
-
-  const handleWrapperTouchStart = useCallback((e) => {
-    if (!needsZoom) return;
-
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const dist = getTouchDist(e.touches);
-      const mid = getTouchMid(e.touches);
-      const zoom = zoomRef.current;
-      zoom.isPinching = true;
-      zoom.startDist = dist;
-      zoom.startScale = zoom.scale;
-      zoom.startMidX = mid.x;
-      zoom.startMidY = mid.y;
-      zoom.startOffsetX = zoom.offsetX;
-      zoom.startOffsetY = zoom.offsetY;
-      interactionRef.current.isDown = false;
-      interactionRef.current.isDragging = false;
-      clearLongPressTimer();
-    }
-  }, [needsZoom]);
-
-  const handleWrapperTouchMove = useCallback((e) => {
-    if (!needsZoom) return;
-    const zoom = zoomRef.current;
-
-    if (zoom.isPinching && e.touches.length === 2) {
-      e.preventDefault();
-      const dist = getTouchDist(e.touches);
-      const mid = getTouchMid(e.touches);
-      const newScale = Math.max(1, Math.min(4, zoom.startScale * (dist / zoom.startDist)));
-
-      // Zoom towards pinch midpoint
-      const wrapper = wrapperRef.current;
-      if (wrapper) {
-        const wRect = wrapper.getBoundingClientRect();
-        const midLocalX = mid.x - wRect.left;
-        const midLocalY = mid.y - wRect.top;
-
-        // The point under the midpoint in canvas-local coords at start of pinch
-        const startMidLocalX = zoom.startMidX - wRect.left;
-        const startMidLocalY = zoom.startMidY - wRect.top;
-        const canvasX = (startMidLocalX - zoom.startOffsetX) / zoom.startScale;
-        const canvasY = (startMidLocalY - zoom.startOffsetY) / zoom.startScale;
-
-        // New offset so the same canvas point stays under the new midpoint
-        zoom.offsetX = midLocalX - canvasX * newScale;
-        zoom.offsetY = midLocalY - canvasY * newScale;
-      }
-
-      zoom.scale = newScale;
-      clampOffset();
-      setZoomLevel(newScale);
-      applyTransform();
-    }
-  }, [needsZoom, clampOffset, applyTransform]);
-
-  const handleWrapperTouchEnd = useCallback((e) => {
-    if (!needsZoom) return;
-    const zoom = zoomRef.current;
-    zoom.isPinching = false;
-
-    if (zoom.scale < 1.1) {
-      zoom.scale = 1;
-      zoom.offsetX = 0;
-      zoom.offsetY = 0;
-      setZoomLevel(1);
-      applyTransform();
-    }
-  }, [needsZoom, applyTransform]);
 
   const clearLongPressTimer = () => {
     if (interactionRef.current.longPressTimer) {
@@ -478,32 +343,14 @@ export default function GameCanvas({
 
   const handlePointerDown = useCallback(
     (e) => {
-      if (isComplete) return;
-      const zoom = zoomRef.current;
-      if (zoom.isPinching) return;
+      if (isComplete || controllerMode) return;
       const touch = e.touches ? e.touches[0] : e;
       if (e.touches && e.touches.length > 1) return;
       if (e.type === 'touchstart') e.preventDefault();
 
-      // When zoomed, detect if this is a pan start (not on a cell) or cell interaction
       const cell = getCellAt(touch.clientX, touch.clientY);
 
-      if (needsZoom && zoom.scale > 1) {
-        // Start potential pan
-        zoom.isPanning = false;
-        zoom.panStartX = touch.clientX;
-        zoom.panStartY = touch.clientY;
-        zoom.panStartOffsetX = zoom.offsetX;
-        zoom.panStartOffsetY = zoom.offsetY;
-      }
-
-      if (!cell) {
-        // If no cell hit but zoomed, start panning immediately
-        if (needsZoom && zoom.scale > 1) {
-          zoom.isPanning = true;
-        }
-        return;
-      }
+      if (!cell) return;
 
       const interaction = interactionRef.current;
       interaction.isDown = true;
@@ -518,39 +365,15 @@ export default function GameCanvas({
       highlightRef.current = { row: cell.row, col: cell.col };
       render();
     },
-    [getCellAt, isComplete, render, needsZoom]
+    [getCellAt, isComplete, render, controllerMode]
   );
 
   const handlePointerMove = useCallback(
     (e) => {
-      const zoom = zoomRef.current;
-      if (zoom.isPinching) return;
+      if (controllerMode) return;
       const touch = e.touches ? e.touches[0] : e;
       if (e.touches && e.touches.length > 1) return;
       if (e.type === 'touchmove') e.preventDefault();
-
-      // Handle panning when zoomed
-      if (needsZoom && zoom.scale > 1) {
-        const dx = touch.clientX - zoom.panStartX;
-        const dy = touch.clientY - zoom.panStartY;
-        const dist = Math.sqrt(dx * dx + dy * dy);
-
-        if (zoom.isPanning || (interactionRef.current.isDown && dist > DRAG_THRESHOLD * 2)) {
-          // Switch to panning mode
-          if (!zoom.isPanning) {
-            zoom.isPanning = true;
-            interactionRef.current.isDown = false;
-            interactionRef.current.isDragging = false;
-            highlightRef.current = { row: -1, col: -1 };
-          }
-          zoom.offsetX = zoom.panStartOffsetX + dx;
-          zoom.offsetY = zoom.panStartOffsetY + dy;
-          clampOffset();
-          applyTransform();
-          render();
-          return;
-        }
-      }
 
       const interaction = interactionRef.current;
       const cell = getCellAt(touch.clientX, touch.clientY);
@@ -561,7 +384,7 @@ export default function GameCanvas({
         highlightRef.current = { row: -1, col: -1 };
       }
 
-      if (interaction.isDown && !interaction.isDragging && !(needsZoom && zoom.scale > 1)) {
+      if (interaction.isDown && !interaction.isDragging) {
         const dx = touch.clientX - interaction.startX;
         const dy = touch.clientY - interaction.startY;
         const dist = Math.sqrt(dx * dx + dy * dy);
@@ -585,26 +408,16 @@ export default function GameCanvas({
 
       render();
     },
-    [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode, needsZoom, clampOffset, applyTransform]
+    [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode, controllerMode]
   );
 
   const handlePointerUp = useCallback(
     (e) => {
+      if (controllerMode) return;
       if (e.type === 'touchend') e.stopPropagation();
 
-      const zoom = zoomRef.current;
       const interaction = interactionRef.current;
       clearLongPressTimer();
-
-      // If we were panning, just stop
-      if (zoom.isPanning) {
-        zoom.isPanning = false;
-        interaction.isDown = false;
-        interaction.isDragging = false;
-        interaction.dragValue = null;
-        interaction.startCell = null;
-        return;
-      }
 
       if (interaction.isDown && !interaction.isDragging) {
         // Single tap — toggle the cell we started on
@@ -627,7 +440,7 @@ export default function GameCanvas({
       highlightRef.current = { row: -1, col: -1 };
       render();
     },
-    [onEndDrag, onToggleCell, render, isComplete]
+    [onEndDrag, onToggleCell, render, isComplete, controllerMode]
   );
 
   // Register native touch listeners (non-passive) to fix mobile single-tap
@@ -647,61 +460,8 @@ export default function GameCanvas({
     };
   }, [handlePointerDown, handlePointerMove, handlePointerUp]);
 
-  // Double-tap to reset zoom
-  const lastTapRef = useRef(0);
-  useEffect(() => {
-    if (!needsZoom) return;
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-
-    const handleDoubleTap = (e) => {
-      if (e.touches && e.touches.length !== 1) return;
-      const now = Date.now();
-      if (now - lastTapRef.current < 300) {
-        // Double tap detected
-        const zoom = zoomRef.current;
-        if (zoom.scale > 1.1) {
-          // Reset zoom
-          zoom.scale = 1;
-          zoom.offsetX = 0;
-          zoom.offsetY = 0;
-          setZoomLevel(1);
-          applyTransform();
-        } else {
-          // Zoom in to 2x at tap point
-          const touch = e.touches ? e.touches[0] : e;
-          const wRect = wrapper.getBoundingClientRect();
-          const tapX = touch.clientX - wRect.left;
-          const tapY = touch.clientY - wRect.top;
-          const canvasX = tapX / zoom.scale;
-          const canvasY = tapY / zoom.scale;
-          zoom.scale = 2;
-          zoom.offsetX = tapX - canvasX * 2;
-          zoom.offsetY = tapY - canvasY * 2;
-          clampOffset();
-          setZoomLevel(2);
-          applyTransform();
-        }
-        lastTapRef.current = 0;
-      } else {
-        lastTapRef.current = now;
-      }
-    };
-
-    // Use a separate handler for double-tap detection on the wrapper
-    // We don't preventDefault here to avoid interfering with single taps
-    wrapper.addEventListener('touchend', handleDoubleTap, { passive: true });
-    return () => wrapper.removeEventListener('touchend', handleDoubleTap);
-  }, [needsZoom, applyTransform, clampOffset]);
-
   return (
-    <div
-      ref={wrapperRef}
-      className={`canvas-wrapper ${needsZoom ? 'zoomable' : ''}`}
-      onTouchStart={handleWrapperTouchStart}
-      onTouchMove={handleWrapperTouchMove}
-      onTouchEnd={handleWrapperTouchEnd}
-    >
+    <div ref={wrapperRef} className="canvas-wrapper">
       <canvas
         ref={canvasRef}
         className="game-canvas"
@@ -710,12 +470,6 @@ export default function GameCanvas({
         onMouseUp={handlePointerUp}
         onMouseLeave={handlePointerUp}
       />
-      {needsZoom && zoomLevel > 1.05 && (
-        <div className="zoom-indicator">{Math.round(zoomLevel * 100)}%</div>
-      )}
-      {needsZoom && zoomLevel <= 1.05 && (
-        <div className="zoom-hint">핀치로 확대 · 더블탭 줌인</div>
-      )}
     </div>
   );
 }

@@ -259,6 +259,26 @@ export function BrokenHeartIcon({ size = 56, className = '' }) {
   );
 }
 
+// 터치 모드 아이콘 (손가락 탭)
+export function TouchIcon({ size = 22, color = 'currentColor', className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 1a3 3 0 00-3 3v8.5l-1.28-1.28a2 2 0 00-2.83 2.83L10 19.17A4 4 0 0012.83 20.5H16a4 4 0 004-4V10a2 2 0 00-4 0v1a2 2 0 00-4 0V4a3 3 0 00-3-3z" stroke={color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
+    </svg>
+  );
+}
+
+// 컨트롤러 모드 아이콘 (게임패드/십자키)
+export function ControllerIcon({ size = 22, color = 'currentColor', className = '' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none" className={className}>
+      <path d="M12 3v4M12 17v4M3 12h4M17 12h4" stroke={color} strokeWidth="2.5" strokeLinecap="round"/>
+      <circle cx="12" cy="12" r="2" fill={color}/>
+      <path d="M12 7l-2-2M12 7l2-2M12 17l-2 2M12 17l2 2M7 12l-2-2M7 12l-2 2M17 12l2-2M17 12l2 2" stroke={color} strokeWidth="1.5" strokeLinecap="round"/>
+    </svg>
+  );
+}
+
 // 난이도 도트 배지
 export function DifficultyBadge({ color, label, size = 10 }) {
   return (

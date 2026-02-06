@@ -345,14 +345,6 @@ export function useGame() {
     dispatch({ type: 'TOGGLE_MODE' });
   }, []);
 
-  const undo = useCallback(() => {
-    dispatch({ type: 'UNDO' });
-  }, []);
-
-  const redo = useCallback(() => {
-    dispatch({ type: 'REDO' });
-  }, []);
-
   const useHint = useCallback(() => {
     dispatch({ type: 'USE_HINT' });
   }, []);
@@ -376,8 +368,6 @@ export function useGame() {
     fillCell,
     endDrag,
     toggleMode,
-    undo,
-    redo,
     useHint,
     clearAutoX,
     restartLevel,

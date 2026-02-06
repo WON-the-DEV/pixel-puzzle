@@ -2,7 +2,8 @@ import { useState, useEffect, useRef, useCallback, useReducer } from 'react';
 import { COLLECTION_DATA, createCollectionPuzzle, checkMonoSolution } from '../lib/collections.js';
 import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint, playLifeLost, playGameOver, playAutoX } from '../lib/sound.js';
 import { hapticFill, hapticLineComplete, hapticPuzzleComplete, hapticLifeLost, hapticGameOver } from '../lib/haptic.js';
-import { BackIcon, HeartIcon, LightbulbIcon, UndoIcon, RedoIcon, PencilIcon, XMarkIcon, VideoIcon } from './icons/Icons.jsx';
+import { BackIcon, HeartIcon, LightbulbIcon, PencilIcon, XMarkIcon, VideoIcon, TouchIcon, ControllerIcon } from './icons/Icons.jsx';
+import ControllerPad from './ControllerPad.jsx';
 
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
@@ -100,7 +101,6 @@ function gameReducer(state, action) {
       const { puzzle } = action;
       const playerGrid = createEmptyGrid(puzzle.size);
 
-      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
       for (let i = 0; i < puzzle.size; i++) {
         if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
           for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
@@ -127,10 +127,7 @@ function gameReducer(state, action) {
       let mistakeFlashCells = [];
 
       if (state.mode === 'fill') {
-        // X 표시된 셀은 fill 모드에서 무시 (목숨 보호)
-        if (current === 2) {
-          return state;
-        }
+        if (current === 2) return state;
         if (current === 1) {
           newGrid[row][col] = 0;
         } else {
@@ -167,16 +164,13 @@ function gameReducer(state, action) {
       if (state.isComplete || state.isGameOver) return state;
       const { row, col, value } = action;
       if (state.playerGrid[row][col] === value) return state;
-      // 이미 X(2)인 셀은 무시 — 추가 라이프 감소 없음
       if (state.playerGrid[row][col] === 2) return state;
-      // 이미 채워진(1) 셀도 무시
       if (state.playerGrid[row][col] === 1) return state;
 
       const newGrid = cloneGrid(state.playerGrid);
       if (value === 1) {
         const expected = state.puzzle.solution[row][col];
         if (expected === 0) {
-          // 틀림 — 라이프 감소 + X 표시
           const newLives = Math.max(0, state.lives - 1);
           newGrid[row][col] = 2;
           if (newLives === 0) {
@@ -241,7 +235,6 @@ function gameReducer(state, action) {
       const puzzle = state.puzzle;
       const playerGrid = createEmptyGrid(puzzle.size);
 
-      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
       for (let i = 0; i < puzzle.size; i++) {
         if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
           for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
@@ -259,8 +252,8 @@ function gameReducer(state, action) {
   }
 }
 
-// ── Canvas (단색, MonoCanvas with same improvements as GameCanvas) ──
-function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, autoXCells, mistakeFlashCells }) {
+// ── Canvas (단색, MonoCanvas — simplified, no zoom) ──
+function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol }) {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
   const interactionRef = useRef({ isDown: false, isDragging: false, dragValue: null, startCell: null, startX: 0, startY: 0 });
@@ -270,15 +263,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
   const mistakeFlashAnimRef = useRef(new Set());
 
   const DRAG_THRESHOLD = 8;
-
-  const zoomRef = useRef({
-    scale: 1, offsetX: 0, offsetY: 0,
-    isPinching: false, startDist: 0, startScale: 1,
-    startMidX: 0, startMidY: 0, startOffsetX: 0, startOffsetY: 0,
-    isPanning: false, panStartX: 0, panStartY: 0, panStartOffsetX: 0, panStartOffsetY: 0,
-  });
-  const [zoomLevel, setZoomLevel] = useState(1);
-  const needsZoom = puzzle && puzzle.size >= 10;
 
   useEffect(() => {
     if (autoXCells && autoXCells.length > 0) {
@@ -354,6 +338,8 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       mistakeBg: 'rgba(239,68,68,0.25)',
       mistakeBorder: '#ef4444',
       xMark: isDark ? '#64748B' : '#C0C4CC',
+      cursorBorder: '#FF6B6B',
+      cursorBg: isDark ? 'rgba(255, 107, 107, 0.15)' : 'rgba(255, 107, 107, 0.12)',
     };
 
     const { size, cellSize, clueWidth, clueHeight, padding, width, height, offsetX, offsetY } = layout;
@@ -368,7 +354,8 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     ctx.fillStyle = C.bg;
     ctx.fillRect(0, 0, width, height);
 
-    const { row: hRow, col: hCol } = highlightRef.current;
+    const hRow = controllerMode ? cursorRow : highlightRef.current.row;
+    const hCol = controllerMode ? cursorCol : highlightRef.current.col;
 
     for (let i = 0; i < size; i++) {
       if (isRowComplete(puzzle.solution, playerGrid, i)) {
@@ -388,7 +375,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
 
     ctx.textAlign = 'center';
     ctx.textBaseline = 'middle';
-    // Unified clue font size based on puzzle size (not clue count)
     let clueFontSize;
     if (size <= 5) clueFontSize = 12;
     else if (size <= 8) clueFontSize = 11;
@@ -474,7 +460,18 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
         }
       }
     }
-  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells]);
+
+    // Controller cursor
+    if (controllerMode && cursorRow >= 0 && cursorRow < size && cursorCol >= 0 && cursorCol < size) {
+      const cx = offsetX + cursorCol * cellSize;
+      const cy = offsetY + cursorRow * cellSize;
+      ctx.fillStyle = C.cursorBg;
+      ctx.fillRect(cx + 1, cy + 1, cellSize - 2, cellSize - 2);
+      ctx.strokeStyle = C.cursorBorder;
+      ctx.lineWidth = 3;
+      ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
+    }
+  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol]);
 
   useEffect(() => { render(); }, [render]);
   useEffect(() => { const h = () => render(); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, [render]);
@@ -484,191 +481,49 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     return () => ob.disconnect();
   }, [render]);
 
-  const clampOffset = useCallback(() => {
-    const zoom = zoomRef.current;
-    const wrapper = wrapperRef.current;
-    const canvas = canvasRef.current;
-    if (!wrapper || !canvas) return;
-    const wRect = wrapper.getBoundingClientRect();
-    const cW = canvas.offsetWidth * zoom.scale;
-    const cH = canvas.offsetHeight * zoom.scale;
-    if (cW <= wRect.width) zoom.offsetX = (wRect.width - cW) / 2;
-    else zoom.offsetX = Math.min(0, Math.max(wRect.width - cW, zoom.offsetX));
-    if (cH <= wRect.height) zoom.offsetY = (wRect.height - cH) / 2;
-    else zoom.offsetY = Math.min(0, Math.max(wRect.height - cH, zoom.offsetY));
-  }, []);
-
-  const applyTransform = useCallback(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const zoom = zoomRef.current;
-    if (zoom.scale > 1) {
-      canvas.style.transform = `translate(${zoom.offsetX}px, ${zoom.offsetY}px) scale(${zoom.scale})`;
-      canvas.style.transformOrigin = '0 0';
-    } else {
-      canvas.style.transform = '';
-      canvas.style.transformOrigin = 'center center';
-    }
-  }, []);
-
   const getCellAt = useCallback((clientX, clientY) => {
     const canvas = canvasRef.current;
     const layout = layoutRef.current;
     if (!canvas || !layout) return null;
 
-    const zoom = zoomRef.current;
-    const wrapper = wrapperRef.current;
-    let x, y;
-
-    if (wrapper && needsZoom && zoom.scale > 1) {
-      const wrapperRect = wrapper.getBoundingClientRect();
-      const rawX = clientX - wrapperRect.left;
-      const rawY = clientY - wrapperRect.top;
-      x = (rawX - zoom.offsetX) / zoom.scale;
-      y = (rawY - zoom.offsetY) / zoom.scale;
-    } else {
-      const rect = canvas.getBoundingClientRect();
-      x = clientX - rect.left;
-      y = clientY - rect.top;
-    }
+    const rect = canvas.getBoundingClientRect();
+    const x = clientX - rect.left;
+    const y = clientY - rect.top;
 
     const col = Math.floor((x - layout.offsetX) / layout.cellSize);
     const row = Math.floor((y - layout.offsetY) / layout.cellSize);
     if (row >= 0 && row < layout.size && col >= 0 && col < layout.size) return { row, col };
     return null;
-  }, [needsZoom]);
-
-  const getTouchDist = (touches) => {
-    const dx = touches[0].clientX - touches[1].clientX;
-    const dy = touches[0].clientY - touches[1].clientY;
-    return Math.sqrt(dx * dx + dy * dy);
-  };
-
-  const getTouchMid = (touches) => ({
-    x: (touches[0].clientX + touches[1].clientX) / 2,
-    y: (touches[0].clientY + touches[1].clientY) / 2,
-  });
-
-  const handleWrapperTouchStart = useCallback((e) => {
-    if (!needsZoom) return;
-    if (e.touches.length === 2) {
-      e.preventDefault();
-      const dist = getTouchDist(e.touches);
-      const mid = getTouchMid(e.touches);
-      const zoom = zoomRef.current;
-      zoom.isPinching = true;
-      zoom.startDist = dist;
-      zoom.startScale = zoom.scale;
-      zoom.startMidX = mid.x;
-      zoom.startMidY = mid.y;
-      zoom.startOffsetX = zoom.offsetX;
-      zoom.startOffsetY = zoom.offsetY;
-      interactionRef.current.isDown = false;
-      interactionRef.current.isDragging = false;
-    }
-  }, [needsZoom]);
-
-  const handleWrapperTouchMove = useCallback((e) => {
-    if (!needsZoom) return;
-    const zoom = zoomRef.current;
-    if (zoom.isPinching && e.touches.length === 2) {
-      e.preventDefault();
-      const dist = getTouchDist(e.touches);
-      const mid = getTouchMid(e.touches);
-      const newScale = Math.max(1, Math.min(4, zoom.startScale * (dist / zoom.startDist)));
-      const wrapper = wrapperRef.current;
-      if (wrapper) {
-        const wRect = wrapper.getBoundingClientRect();
-        const midLocalX = mid.x - wRect.left;
-        const midLocalY = mid.y - wRect.top;
-        const startMidLocalX = zoom.startMidX - wRect.left;
-        const startMidLocalY = zoom.startMidY - wRect.top;
-        const canvasX = (startMidLocalX - zoom.startOffsetX) / zoom.startScale;
-        const canvasY = (startMidLocalY - zoom.startOffsetY) / zoom.startScale;
-        zoom.offsetX = midLocalX - canvasX * newScale;
-        zoom.offsetY = midLocalY - canvasY * newScale;
-      }
-      zoom.scale = newScale;
-      clampOffset();
-      setZoomLevel(newScale);
-      applyTransform();
-    }
-  }, [needsZoom, clampOffset, applyTransform]);
-
-  const handleWrapperTouchEnd = useCallback((e) => {
-    if (!needsZoom) return;
-    const zoom = zoomRef.current;
-    zoom.isPinching = false;
-    if (zoom.scale < 1.1) {
-      zoom.scale = 1; zoom.offsetX = 0; zoom.offsetY = 0;
-      setZoomLevel(1);
-      applyTransform();
-    }
-  }, [needsZoom, applyTransform]);
+  }, []);
 
   const handlePointerDown = useCallback((e) => {
-    if (isComplete) return;
-    const zoom = zoomRef.current;
-    if (zoom.isPinching) return;
+    if (isComplete || controllerMode) return;
     const touch = e.touches ? e.touches[0] : e;
     if (e.touches && e.touches.length > 1) return;
     if (e.type === 'touchstart') e.preventDefault();
 
     const cell = getCellAt(touch.clientX, touch.clientY);
-
-    if (needsZoom && zoom.scale > 1) {
-      zoom.isPanning = false;
-      zoom.panStartX = touch.clientX;
-      zoom.panStartY = touch.clientY;
-      zoom.panStartOffsetX = zoom.offsetX;
-      zoom.panStartOffsetY = zoom.offsetY;
-    }
-
-    if (!cell) {
-      if (needsZoom && zoom.scale > 1) zoom.isPanning = true;
-      return;
-    }
+    if (!cell) return;
 
     const i = interactionRef.current;
     i.isDown = true; i.isDragging = false; i.startCell = cell;
     i.startX = touch.clientX; i.startY = touch.clientY; i.dragValue = null;
     highlightRef.current = { row: cell.row, col: cell.col };
     render();
-  }, [getCellAt, isComplete, render, needsZoom]);
+  }, [getCellAt, isComplete, render, controllerMode]);
 
   const handlePointerMove = useCallback((e) => {
-    const zoom = zoomRef.current;
-    if (zoom.isPinching) return;
+    if (controllerMode) return;
     const touch = e.touches ? e.touches[0] : e;
     if (e.touches && e.touches.length > 1) return;
     if (e.type === 'touchmove') e.preventDefault();
-
-    if (needsZoom && zoom.scale > 1) {
-      const dx = touch.clientX - zoom.panStartX;
-      const dy = touch.clientY - zoom.panStartY;
-      const dist = Math.sqrt(dx * dx + dy * dy);
-      if (zoom.isPanning || (interactionRef.current.isDown && dist > DRAG_THRESHOLD * 2)) {
-        if (!zoom.isPanning) {
-          zoom.isPanning = true;
-          interactionRef.current.isDown = false;
-          interactionRef.current.isDragging = false;
-          highlightRef.current = { row: -1, col: -1 };
-        }
-        zoom.offsetX = zoom.panStartOffsetX + dx;
-        zoom.offsetY = zoom.panStartOffsetY + dy;
-        clampOffset();
-        applyTransform();
-        render();
-        return;
-      }
-    }
 
     const inter = interactionRef.current;
     const cell = getCellAt(touch.clientX, touch.clientY);
     if (cell) highlightRef.current = { row: cell.row, col: cell.col };
     else highlightRef.current = { row: -1, col: -1 };
 
-    if (inter.isDown && !inter.isDragging && !(needsZoom && zoom.scale > 1)) {
+    if (inter.isDown && !inter.isDragging) {
       const dx = touch.clientX - inter.startX;
       const dy = touch.clientY - inter.startY;
       if (Math.sqrt(dx * dx + dy * dy) >= DRAG_THRESHOLD) {
@@ -685,21 +540,12 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       onFillCell(cell.row, cell.col, inter.dragValue);
     }
     render();
-  }, [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode, needsZoom, clampOffset, applyTransform]);
+  }, [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode, controllerMode]);
 
   const handlePointerUp = useCallback((e) => {
+    if (controllerMode) return;
     if (e.type === 'touchend') e.stopPropagation();
-    const zoom = zoomRef.current;
     const inter = interactionRef.current;
-
-    if (zoom.isPanning) {
-      zoom.isPanning = false;
-      inter.isDown = false;
-      inter.isDragging = false;
-      inter.dragValue = null;
-      inter.startCell = null;
-      return;
-    }
 
     if (inter.isDown && !inter.isDragging) {
       const cell = inter.startCell;
@@ -709,7 +555,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     inter.isDown = false; inter.isDragging = false; inter.dragValue = null; inter.startCell = null;
     highlightRef.current = { row: -1, col: -1 };
     render();
-  }, [onEndDrag, onToggleCell, render, isComplete]);
+  }, [onEndDrag, onToggleCell, render, isComplete, controllerMode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -727,61 +573,12 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     };
   }, [handlePointerDown, handlePointerMove, handlePointerUp]);
 
-  // Double tap to zoom
-  const lastTapRef = useRef(0);
-  useEffect(() => {
-    if (!needsZoom) return;
-    const wrapper = wrapperRef.current;
-    if (!wrapper) return;
-    const handleDoubleTap = (e) => {
-      if (e.touches && e.touches.length !== 1) return;
-      const now = Date.now();
-      if (now - lastTapRef.current < 300) {
-        const zoom = zoomRef.current;
-        if (zoom.scale > 1.1) {
-          zoom.scale = 1; zoom.offsetX = 0; zoom.offsetY = 0;
-          setZoomLevel(1);
-        } else {
-          const touch = e.changedTouches ? e.changedTouches[0] : e;
-          const wRect = wrapper.getBoundingClientRect();
-          const tapX = touch.clientX - wRect.left;
-          const tapY = touch.clientY - wRect.top;
-          const canvasX = tapX / zoom.scale;
-          const canvasY = tapY / zoom.scale;
-          zoom.scale = 2;
-          zoom.offsetX = tapX - canvasX * 2;
-          zoom.offsetY = tapY - canvasY * 2;
-          clampOffset();
-          setZoomLevel(2);
-        }
-        applyTransform();
-        lastTapRef.current = 0;
-      } else {
-        lastTapRef.current = now;
-      }
-    };
-    wrapper.addEventListener('touchend', handleDoubleTap, { passive: true });
-    return () => wrapper.removeEventListener('touchend', handleDoubleTap);
-  }, [needsZoom, applyTransform, clampOffset]);
-
   return (
-    <div
-      ref={wrapperRef}
-      className={`canvas-wrapper ${needsZoom ? 'zoomable' : ''}`}
-      onTouchStart={handleWrapperTouchStart}
-      onTouchMove={handleWrapperTouchMove}
-      onTouchEnd={handleWrapperTouchEnd}
-    >
+    <div ref={wrapperRef} className="canvas-wrapper">
       <canvas ref={canvasRef} className="game-canvas"
         onMouseDown={handlePointerDown} onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp} onMouseLeave={handlePointerUp}
       />
-      {needsZoom && zoomLevel > 1.05 && (
-        <div className="zoom-indicator">{Math.round(zoomLevel * 100)}%</div>
-      )}
-      {needsZoom && zoomLevel <= 1.05 && (
-        <div className="zoom-hint">핀치로 확대 · 더블탭 줌인</div>
-      )}
     </div>
   );
 }
@@ -794,10 +591,17 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const timerRef = useRef(null);
   const wasCompleteRef = useRef(false);
 
+  // Controller mode
+  const [controllerMode, setControllerMode] = useState(false);
+  const [cursorRow, setCursorRow] = useState(0);
+  const [cursorCol, setCursorCol] = useState(0);
+
   useEffect(() => {
     if (!collection) return;
     const puzzle = createCollectionPuzzle(collection, tileRow, tileCol);
     dispatch({ type: 'START', puzzle });
+    setCursorRow(0);
+    setCursorCol(0);
   }, [collection, tileRow, tileCol]);
 
   useEffect(() => {
@@ -839,11 +643,42 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
 
   const handleFillCell = useCallback((row, col, value) => { dispatch({ type: 'FILL_CELL', row, col, value }); }, []);
   const handleEndDrag = useCallback(() => { dispatch({ type: 'END_DRAG' }); }, []);
-  const handleUndo = useCallback(() => { playUndo(); dispatch({ type: 'UNDO' }); }, []);
-  const handleRedo = useCallback(() => { dispatch({ type: 'REDO' }); }, []);
+  const handleToggleMode = useCallback(() => { dispatch({ type: 'TOGGLE_MODE' }); }, []);
   const handleHint = useCallback(() => { if (onUseHint && onUseHint()) { playHint(); dispatch({ type: 'USE_HINT' }); } }, [onUseHint]);
   const handleRestart = useCallback(() => { wasCompleteRef.current = false; dispatch({ type: 'RESTART' }); }, []);
   const handleRevive = useCallback(() => { dispatch({ type: 'REVIVE' }); }, []);
+
+  // Controller mode handlers
+  const handleControllerMove = useCallback((direction) => {
+    if (!state.puzzle) return;
+    setCursorRow(prev => {
+      if (direction === 'up') return Math.max(0, prev - 1);
+      if (direction === 'down') return Math.min(state.puzzle.size - 1, prev + 1);
+      return prev;
+    });
+    setCursorCol(prev => {
+      if (direction === 'left') return Math.max(0, prev - 1);
+      if (direction === 'right') return Math.min(state.puzzle.size - 1, prev + 1);
+      return prev;
+    });
+    hapticFill();
+  }, [state.puzzle]);
+
+  const handleControllerFill = useCallback(() => {
+    if (state.isComplete || state.isGameOver || !state.puzzle) return;
+    playFill();
+    hapticFill();
+    if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
+    dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
+  }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode]);
+
+  const handleControllerMark = useCallback(() => {
+    if (state.isComplete || state.isGameOver || !state.puzzle) return;
+    playMark();
+    hapticFill();
+    if (state.mode !== 'mark') dispatch({ type: 'TOGGLE_MODE' });
+    dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
+  }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode]);
 
   if (!state.puzzle) return null;
 
@@ -893,40 +728,69 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
           isComplete={state.isComplete}
           autoXCells={state.autoXCells}
           mistakeFlashCells={state.mistakeFlashCells}
+          controllerMode={controllerMode}
+          cursorRow={cursorRow}
+          cursorCol={cursorCol}
         />
       </main>
 
-      <footer className="controls">
-        <button className="control-btn" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
-          <span className="icon"><LightbulbIcon size={24} color="var(--text)" /></span>
-          <span className="label">힌트</span>
-          {hints > 0 && <span className="count">{hints}</span>}
-        </button>
-        <button className="control-btn" onClick={handleUndo} disabled={state.isGameOver}>
-          <span className="icon"><UndoIcon size={24} /></span>
-          <span className="label">실행취소</span>
-        </button>
-        <button className="control-btn" onClick={handleRedo} disabled={state.isGameOver}>
-          <span className="icon"><RedoIcon size={24} /></span>
-          <span className="label">다시실행</span>
-        </button>
-        <button
-          className={`control-btn mode-toggle ${state.mode === 'fill' ? 'mode-fill' : 'mode-mark'}`}
-          onClick={() => dispatch({ type: 'TOGGLE_MODE' })}
-          disabled={state.isGameOver}
-        >
-          <div className="mode-toggle-inner">
-            <div className={`mode-option ${state.mode === 'fill' ? 'active' : ''}`}>
-              <span className="mode-icon"><PencilIcon size={18} color={state.mode === 'fill' ? 'var(--accent)' : 'var(--text-secondary)'} /></span>
-              <span className="mode-label">색칠</span>
-            </div>
-            <div className={`mode-option ${state.mode === 'mark' ? 'active' : ''}`}>
-              <span className="mode-icon"><XMarkIcon size={18} color={state.mode === 'mark' ? 'var(--danger)' : 'var(--text-secondary)'} /></span>
-              <span className="mode-label">X표시</span>
-            </div>
+      {/* Controls */}
+      {controllerMode ? (
+        <footer className="controls controller-controls">
+          <div className="controller-controls-row">
+            <button className="control-btn" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
+              <span className="icon"><LightbulbIcon size={24} color="var(--text)" /></span>
+              <span className="label">힌트</span>
+              {hints > 0 && <span className="count">{hints}</span>}
+            </button>
+            <ControllerPad
+              onMove={handleControllerMove}
+              onFill={handleControllerFill}
+              onMark={handleControllerMark}
+            />
+            <button
+              className="control-btn mode-switch-btn"
+              onClick={() => setControllerMode(false)}
+              aria-label="터치 모드로 전환"
+            >
+              <span className="icon"><TouchIcon size={24} color="var(--text)" /></span>
+              <span className="label">터치</span>
+            </button>
           </div>
-        </button>
-      </footer>
+        </footer>
+      ) : (
+        <footer className="controls">
+          <button className="control-btn" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
+            <span className="icon"><LightbulbIcon size={24} color="var(--text)" /></span>
+            <span className="label">힌트</span>
+            {hints > 0 && <span className="count">{hints}</span>}
+          </button>
+          <button
+            className={`control-btn mode-toggle ${state.mode === 'fill' ? 'mode-fill' : 'mode-mark'}`}
+            onClick={handleToggleMode}
+            disabled={state.isGameOver}
+          >
+            <div className="mode-toggle-inner">
+              <div className={`mode-option ${state.mode === 'fill' ? 'active' : ''}`}>
+                <span className="mode-icon"><PencilIcon size={18} color={state.mode === 'fill' ? 'var(--accent)' : 'var(--text-secondary)'} /></span>
+                <span className="mode-label">색칠</span>
+              </div>
+              <div className={`mode-option ${state.mode === 'mark' ? 'active' : ''}`}>
+                <span className="mode-icon"><XMarkIcon size={18} color={state.mode === 'mark' ? 'var(--danger)' : 'var(--text-secondary)'} /></span>
+                <span className="mode-label">X표시</span>
+              </div>
+            </div>
+          </button>
+          <button
+            className="control-btn mode-switch-btn"
+            onClick={() => setControllerMode(true)}
+            aria-label="컨트롤러 모드로 전환"
+          >
+            <span className="icon"><ControllerIcon size={24} color="var(--text)" /></span>
+            <span className="label">컨트롤러</span>
+          </button>
+        </footer>
+      )}
 
       {state.isComplete && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onGoHome()}>

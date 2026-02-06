@@ -17,6 +17,15 @@ function formatTime(ms) {
   return `${mins}:${secs.toString().padStart(2, '0')}`;
 }
 
+// Chevron icon for accordion
+function ChevronDown({ size = 18, color = 'currentColor' }) {
+  return (
+    <svg width={size} height={size} viewBox="0 0 24 24" fill="none">
+      <path d="M6 9l6 6 6-6" stroke={color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round" />
+    </svg>
+  );
+}
+
 function StarsDisplay({ stars, small }) {
   if (!stars) return null;
   const iconSize = small ? 7 : 8;
@@ -43,7 +52,6 @@ const MiniPuzzleArt = memo(function MiniPuzzleArt({ level, sectionColor }) {
   const puzzle = getCachedSolution(level);
   if (!puzzle) return null;
   const { size, solution } = puzzle;
-  // Calculate cell size to fit ~48px total
   const totalSize = 44;
   const cellPx = Math.floor(totalSize / size);
   const actualSize = cellPx * size;
@@ -84,12 +92,44 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
   const setActiveTab = onTabChange || (() => {});
   const bodyRef = useRef(null);
 
+  // Accordion state: determine which sections should be open by default
+  const getDefaultOpenSections = useCallback(() => {
+    const openSet = new Set();
+    for (const section of SECTIONS) {
+      const levels = Array.from({ length: section.end - section.start + 1 }, (_, i) => section.start + i);
+      const allCompleted = levels.every(l => completedSet.has(l));
+      const hasPlayable = levels.some(l => isLevelUnlocked(l, completedLevels) && !completedSet.has(l));
+
+      // Open if has playable (current progress) or not all completed
+      if (hasPlayable || !allCompleted) {
+        openSet.add(section.name);
+      }
+    }
+    // Always have at least one section open
+    if (openSet.size === 0) openSet.add(SECTIONS[0].name);
+    return openSet;
+  }, [completedLevels, completedSet]);
+
+  const [openSections, setOpenSections] = useState(() => getDefaultOpenSections());
+
+  const toggleSection = useCallback((sectionName) => {
+    setOpenSections(prev => {
+      const next = new Set(prev);
+      if (next.has(sectionName)) {
+        next.delete(sectionName);
+      } else {
+        next.add(sectionName);
+      }
+      return next;
+    });
+  }, []);
+
   // 스크롤 위치 복원
   useEffect(() => {
     if (bodyRef.current && savedScrollY > 0) {
       bodyRef.current.scrollTop = savedScrollY;
     }
-  }, []); // 마운트 시 한번만
+  }, []);
 
   // 스크롤 위치 저장
   useEffect(() => {
@@ -184,63 +224,81 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
               </div>
             </div>
 
-            {/* Level sections */}
-            {SECTIONS.map((section) => (
-              <div className="level-section-group" key={section.name}>
-                <div className="section-title" style={{ color: section.colorRaw }}>
-                  <DifficultyBadge color={section.colorRaw} label={section.name} />
-                  <span className="section-size">{section.size}</span>
-                </div>
-                <div className="level-row">
-                  {Array.from({ length: section.end - section.start + 1 }, (_, i) => {
-                    const level = section.start + i;
-                    const isCompleted = completedSet.has(level);
-                    const isUnlocked = isLevelUnlocked(level, completedLevels);
-                    const isLocked = !isUnlocked && !isCompleted;
-                    const isCurrent = isUnlocked && !isCompleted;
+            {/* Level sections — accordion */}
+            {SECTIONS.map((section) => {
+              const levels = Array.from({ length: section.end - section.start + 1 }, (_, i) => section.start + i);
+              const completedCount = levels.filter(l => completedSet.has(l)).length;
+              const totalCount = levels.length;
+              const isOpen = openSections.has(section.name);
 
-                    let className = 'level-btn';
-                    if (isCompleted) className += ' completed';
-                    if (isLocked) className += ' locked';
-                    if (isCurrent) className += ' current';
+              return (
+                <div className="level-section-group" key={section.name}>
+                  <div className="section-header" onClick={() => toggleSection(section.name)}>
+                    <div className="section-header-left">
+                      <div className="section-title" style={{ color: section.colorRaw, marginBottom: 0 }}>
+                        <DifficultyBadge color={section.colorRaw} label={section.name} />
+                        <span className="section-size">{section.size}</span>
+                      </div>
+                    </div>
+                    <div className="section-header-right">
+                      <span className="section-progress-text">{completedCount}/{totalCount}</span>
+                      <span className={`section-chevron ${isOpen ? 'open' : ''}`}>
+                        <ChevronDown size={18} color="var(--text-tertiary)" />
+                      </span>
+                    </div>
+                  </div>
+                  <div className={`section-body ${isOpen ? 'expanded' : 'collapsed'}`}>
+                    <div className="level-row">
+                      {levels.map((level) => {
+                        const isCompleted = completedSet.has(level);
+                        const isUnlocked = isLevelUnlocked(level, completedLevels);
+                        const isLocked = !isUnlocked && !isCompleted;
+                        const isCurrent = isUnlocked && !isCompleted;
 
-                    const presetName =
-                      level <= 5 ? PRESET_PUZZLES[(level - 1) % PRESET_PUZZLES.length].name : null;
+                        let className = 'level-btn';
+                        if (isCompleted) className += ' completed';
+                        if (isLocked) className += ' locked';
+                        if (isCurrent) className += ' current';
 
-                    const bestTime = bestTimes[level];
-                    const levelStars = bestStars[level];
+                        const presetName =
+                          level <= 5 ? PRESET_PUZZLES[(level - 1) % PRESET_PUZZLES.length].name : null;
 
-                    return (
-                      <button
-                        key={level}
-                        className={className}
-                        disabled={isLocked}
-                        onClick={() => onStartLevel(level)}
-                        title={presetName ? `${presetName}` : `Level ${level}`}
-                      >
-                        {isCompleted ? (
-                          <>
-                            <MiniPuzzleArt level={level} sectionColor={section.colorRaw} />
-                            <div className="level-btn-completed-info">
-                              {levelStars && <StarsDisplay stars={levelStars} small />}
-                              {bestTime && <span className="level-btn-time">{formatTime(bestTime)}</span>}
-                            </div>
-                          </>
-                        ) : (
-                          <span className="level-btn-number">
-                            {isLocked ? (
-                              <LockIcon size={14} color="var(--text-tertiary)" />
+                        const bestTime = bestTimes[level];
+                        const levelStars = bestStars[level];
+
+                        return (
+                          <button
+                            key={level}
+                            className={className}
+                            disabled={isLocked}
+                            onClick={() => onStartLevel(level)}
+                            title={presetName ? `${presetName}` : `Level ${level}`}
+                          >
+                            {isCompleted ? (
+                              <>
+                                <MiniPuzzleArt level={level} sectionColor={section.colorRaw} />
+                                <div className="level-btn-completed-info">
+                                  {levelStars && <StarsDisplay stars={levelStars} small />}
+                                  {bestTime && <span className="level-btn-time">{formatTime(bestTime)}</span>}
+                                </div>
+                              </>
                             ) : (
-                              level
+                              <span className="level-btn-number">
+                                {isLocked ? (
+                                  <LockIcon size={14} color="var(--text-tertiary)" />
+                                ) : (
+                                  level
+                                )}
+                              </span>
                             )}
-                          </span>
-                        )}
-                      </button>
-                    );
-                  })}
+                          </button>
+                        );
+                      })}
+                    </div>
+                  </div>
                 </div>
-              </div>
-            ))}
+              );
+            })}
           </>
         ) : (
           <CollectionView
