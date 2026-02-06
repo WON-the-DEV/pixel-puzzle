@@ -270,6 +270,23 @@ export default function GameCanvas({
     return () => observer.disconnect();
   }, [render]);
 
+  // Register native touch listeners (non-passive) to fix mobile single-tap
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const opts = { passive: false };
+    canvas.addEventListener('touchstart', handlePointerDown, opts);
+    canvas.addEventListener('touchmove', handlePointerMove, opts);
+    canvas.addEventListener('touchend', handlePointerUp, opts);
+    canvas.addEventListener('touchcancel', handlePointerUp, opts);
+    return () => {
+      canvas.removeEventListener('touchstart', handlePointerDown, opts);
+      canvas.removeEventListener('touchmove', handlePointerMove, opts);
+      canvas.removeEventListener('touchend', handlePointerUp, opts);
+      canvas.removeEventListener('touchcancel', handlePointerUp, opts);
+    };
+  }, [handlePointerDown, handlePointerMove, handlePointerUp]);
+
   const getCellAt = useCallback((clientX, clientY) => {
     const canvas = canvasRef.current;
     const layout = layoutRef.current;
@@ -317,18 +334,8 @@ export default function GameCanvas({
       interactionRef.current.isDown = false;
       interactionRef.current.isDragging = false;
       clearLongPressTimer();
-    } else if (e.touches.length === 1 && zoomRef.current.scale > 1) {
-      const now = Date.now();
-      if (now - lastTapRef.current < 300) {
-        zoomRef.current = { scale: 1, offsetX: 0, offsetY: 0, isPinching: false, startDist: 0, startScale: 1 };
-        setZoomLevel(1);
-        applyTransform();
-        lastTapRef.current = 0;
-        e.preventDefault();
-        return;
-      }
-      lastTapRef.current = now;
     }
+    // Double-tap to reset zoom only when already zoomed — don't interfere with normal taps
   }, [needsZoom]);
 
   const handleWrapperTouchMove = useCallback((e) => {
@@ -379,7 +386,8 @@ export default function GameCanvas({
       if (zoomRef.current.isPinching) return;
       const touch = e.touches ? e.touches[0] : e;
       if (e.touches && e.touches.length > 1) return;
-      if (e.touches) e.preventDefault();
+      // preventDefault only on touchstart to prevent scrolling while playing
+      if (e.type === 'touchstart') e.preventDefault();
 
       const cell = getCellAt(touch.clientX, touch.clientY);
       if (!cell) return;
@@ -405,7 +413,7 @@ export default function GameCanvas({
       if (zoomRef.current.isPinching) return;
       const touch = e.touches ? e.touches[0] : e;
       if (e.touches && e.touches.length > 1) return;
-      if (e.touches) e.preventDefault();
+      if (e.type === 'touchmove') e.preventDefault();
 
       const interaction = interactionRef.current;
       const cell = getCellAt(touch.clientX, touch.clientY);
@@ -445,10 +453,14 @@ export default function GameCanvas({
 
   const handlePointerUp = useCallback(
     (e) => {
+      // Stop propagation to prevent wrapper handlers from interfering
+      if (e.type === 'touchend') e.stopPropagation();
+
       const interaction = interactionRef.current;
       clearLongPressTimer();
 
       if (interaction.isDown && !interaction.isDragging) {
+        // Single tap — toggle the cell we started on
         const cell = interaction.startCell;
         if (cell && !isComplete) {
           onToggleCell(cell.row, cell.col);
@@ -486,10 +498,6 @@ export default function GameCanvas({
         onMouseMove={handlePointerMove}
         onMouseUp={handlePointerUp}
         onMouseLeave={handlePointerUp}
-        onTouchStart={handlePointerDown}
-        onTouchMove={handlePointerMove}
-        onTouchEnd={handlePointerUp}
-        onTouchCancel={handlePointerUp}
       />
       {needsZoom && zoomLevel > 1.05 && (
         <div className="zoom-indicator">{Math.round(zoomLevel * 100)}%</div>

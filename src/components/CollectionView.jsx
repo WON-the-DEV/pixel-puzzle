@@ -51,8 +51,8 @@ function BigPicturePreview({ collection, completedTiles, size = 200 }) {
         if (isCompleted) {
           ctx.fillStyle = palette[colorIdx - 1] || '#888';
         } else {
-          // 어두운 실루엣
-          ctx.fillStyle = isDark ? 'rgba(255,255,255,0.08)' : 'rgba(0,0,0,0.08)';
+          // 미완료 타일은 그리지 않음 (완성 전까지 형태 숨김)
+          continue;
         }
         
         ctx.fillRect(x, y, cellSize, cellSize);

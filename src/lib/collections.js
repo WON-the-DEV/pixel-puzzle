@@ -343,20 +343,41 @@ export function transposeGrid(grid) {
 }
 
 /**
- * 컬렉션 타일의 전체 퍼즐 데이터 생성
+ * 단색 단서 생성 (색상 무관 — >0이면 채워야 할 셀)
+ */
+export function generateMonoClues(grid) {
+  return grid.map((row) => {
+    const clues = [];
+    let count = 0;
+    for (const cell of row) {
+      if (cell > 0) {
+        count++;
+      } else {
+        if (count > 0) {
+          clues.push(count);
+          count = 0;
+        }
+      }
+    }
+    if (count > 0) clues.push(count);
+    return clues.length > 0 ? clues : [0];
+  });
+}
+
+/**
+ * 컬렉션 타일의 전체 퍼즐 데이터 생성 (단색 모드)
+ * 플레이는 단색(채우기/X)으로, 완료 후 큰 그림에서만 컬러 표시
  */
 export function createCollectionPuzzle(collection, tileRow, tileCol) {
   const { solution, palette } = extractTilePuzzle(collection, tileRow, tileCol);
   const size = solution.length;
   
-  const rowClues = generateMultiColorClues(solution);
-  const colClues = generateMultiColorClues(transposeGrid(solution));
+  // 단색 단서 (색상 구분 없이 >0이면 채워야 할 셀)
+  const rowClues = generateMonoClues(solution);
+  const colClues = generateMonoClues(transposeGrid(solution));
   
   // 채워야 할 셀 수
   const totalFilled = solution.flat().filter(c => c > 0).length;
-  
-  // 사용된 색상 인덱스 모음
-  const usedColors = [...new Set(solution.flat().filter(c => c > 0))].sort((a, b) => a - b);
   
   return {
     size,
@@ -365,23 +386,22 @@ export function createCollectionPuzzle(collection, tileRow, tileCol) {
     colClues,
     palette,
     totalFilled,
-    usedColors,
-    isMultiColor: usedColors.length > 1,
+    isMultiColor: false, // 항상 단색 플레이
     name: `${collection.name} ${tileRow * collection.tileCols + tileCol + 1}`,
   };
 }
 
 /**
- * 멀티컬러 솔루션 체크
+ * 솔루션 체크 (단색 모드: expected > 0이면 actual === 1이어야 정답)
  */
-export function checkMultiColorSolution(solution, playerGrid) {
+export function checkMonoSolution(solution, playerGrid) {
   const size = solution.length;
   for (let i = 0; i < size; i++) {
     for (let j = 0; j < size; j++) {
       const expected = solution[i][j];
       const actual = playerGrid[i][j];
-      if (expected > 0 && actual !== expected) return false;
-      if (expected === 0 && actual > 0) return false;
+      if (expected > 0 && actual !== 1) return false;
+      if (expected === 0 && actual === 1) return false;
     }
   }
   return true;
