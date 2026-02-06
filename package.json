@@ -1,20 +1,22 @@
 {
   "name": "toss-nonogram",
-  "version": "0.1.0",
-  "description": "노노그램 퍼즐 게임 for 앱인토스",
-  "main": "src/scripts/main.js",
+  "private": true,
+  "version": "1.0.0",
+  "type": "module",
+  "description": "노노그램 퍼즐 게임",
   "scripts": {
-    "dev": "npx live-server src --port=3000",
-    "build": "echo 'Build script TBD'",
-    "test": "echo 'Test script TBD'"
+    "dev": "vite",
+    "build": "vite build",
+    "preview": "vite preview"
   },
-  "keywords": [
-    "nonogram",
-    "puzzle",
-    "toss",
-    "앱인토스"
-  ],
-  "author": "won",
-  "license": "MIT",
-  "private": true
+  "dependencies": {
+    "react": "^19.0.0",
+    "react-dom": "^19.0.0"
+  },
+  "devDependencies": {
+    "@types/react": "^19.0.0",
+    "@types/react-dom": "^19.0.0",
+    "@vitejs/plugin-react": "^4.5.2",
+    "vite": "^6.3.5"
+  }
 }
