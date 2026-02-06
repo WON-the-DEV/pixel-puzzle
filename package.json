@@ -1,0 +1,20 @@
+{
+  "name": "toss-nonogram",
+  "version": "0.1.0",
+  "description": "노노그램 퍼즐 게임 for 앱인토스",
+  "main": "src/scripts/main.js",
+  "scripts": {
+    "dev": "npx live-server src --port=3000",
+    "build": "echo 'Build script TBD'",
+    "test": "echo 'Test script TBD'"
+  },
+  "keywords": [
+    "nonogram",
+    "puzzle",
+    "toss",
+    "앱인토스"
+  ],
+  "author": "won",
+  "license": "MIT",
+  "private": true
+}
