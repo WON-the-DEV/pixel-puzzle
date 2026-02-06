@@ -463,6 +463,17 @@ body {
   gap: 0px;
 }
 
+.level-btn-name {
+  font-size: 7px;
+  font-weight: 500;
+  color: var(--text-tertiary);
+  line-height: 1;
+  max-width: 48px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .mini-puzzle-art {
   border: 1px solid var(--border-light);
 }

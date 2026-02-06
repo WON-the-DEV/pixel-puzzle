@@ -29,30 +29,30 @@ export const COLLECTIONS = [
     id: 'easy',
     name: '초급 도전',
     emoji: '🌟',
-    description: '초급 퍼즐 30개를 정복하세요',
+    description: '초급 퍼즐 40개를 정복하세요',
     color: '#6C5CE7',
-    levels: Array.from({ length: 30 }, (_, i) => i + 31),
-    gridCols: 6,
+    levels: Array.from({ length: 40 }, (_, i) => i + 31),
+    gridCols: 8,
     gridRows: 5,
   },
   {
     id: 'intermediate',
     name: '중급 정복',
     emoji: '💜',
-    description: '중급 퍼즐 35개를 클리어하세요',
+    description: '중급 퍼즐 45개를 클리어하세요',
     color: '#8b5cf6',
-    levels: Array.from({ length: 35 }, (_, i) => i + 61),
-    gridCols: 7,
+    levels: Array.from({ length: 45 }, (_, i) => i + 71),
+    gridCols: 9,
     gridRows: 5,
   },
   {
     id: 'master',
     name: '마스터',
     emoji: '🔥',
-    description: '고급 퍼즐 25개를 완성하세요',
+    description: '고급 퍼즐 35개를 완성하세요',
     color: '#ef4444',
-    levels: Array.from({ length: 25 }, (_, i) => i + 96),
-    gridCols: 5,
+    levels: Array.from({ length: 35 }, (_, i) => i + 116),
+    gridCols: 7,
     gridRows: 5,
   },
 ];
@@ -131,15 +131,15 @@ export function generateRandomPuzzle(size, seed) {
  */
 const LEVEL_RANGES = [
   { start: 1,  end: 30, size: 5,  key: '5x5' },
-  { start: 31, end: 60, size: 8,  key: '8x8' },
-  { start: 61, end: 95, size: 10, key: '10x10' },
-  { start: 96, end: 120, size: 15, key: '15x15' },
+  { start: 31, end: 70, size: 8,  key: '8x8' },
+  { start: 71, end: 115, size: 10, key: '10x10' },
+  { start: 116, end: 150, size: 15, key: '15x15' },
 ];
 
 /**
  * 총 레벨 수
  */
-export const TOTAL_LEVELS = 120;
+export const TOTAL_LEVELS = 150;
 
 /**
  * 레벨에 따른 퍼즐 크기

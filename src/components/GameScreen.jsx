@@ -27,6 +27,7 @@ export default function GameScreen({
   onRestartLevel,
   onRevive,
   hints,
+  darkMode = false,
 }) {
   const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife, mistakeFlashCells, usedRevive } = gameState;
   const [displayTime, setDisplayTime] = useState('00:00');
@@ -253,6 +254,7 @@ export default function GameScreen({
           controllerMode={controllerMode}
           cursorRow={cursorRow}
           cursorCol={cursorCol}
+          darkMode={darkMode}
         />
       </main>
 

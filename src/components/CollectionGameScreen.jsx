@@ -258,7 +258,7 @@ function gameReducer(state, action) {
 }
 
 // ── Canvas (단색, MonoCanvas — simplified, no zoom) ──
-function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol }) {
+function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode = false }) {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
   const interactionRef = useRef({ isDown: false, isDragging: false, dragValue: null, startCell: null, startX: 0, startY: 0 });
@@ -504,7 +504,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       ctx.lineWidth = 3;
       ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
     }
-  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol]);
+  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
   useEffect(() => { render(); }, [render]);
   useEffect(() => { const h = () => render(); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, [render]);
@@ -618,7 +618,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
 }
 
 // ── Main Screen ──
-export default function CollectionGameScreen({ collectionId, tileRow, tileCol, onGoHome, onComplete, hints, onUseHint }) {
+export default function CollectionGameScreen({ collectionId, tileRow, tileCol, onGoHome, onComplete, hints, onUseHint, darkMode = false }) {
   const collection = COLLECTION_DATA.find(c => c.id === collectionId);
   const [state, dispatch] = useReducer(gameReducer, INITIAL_STATE);
   const [displayTime, setDisplayTime] = useState('00:00');
@@ -765,6 +765,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
           controllerMode={controllerMode}
           cursorRow={cursorRow}
           cursorCol={cursorCol}
+          darkMode={darkMode}
         />
       </main>
 

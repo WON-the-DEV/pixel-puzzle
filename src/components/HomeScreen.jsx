@@ -32,9 +32,9 @@ function HintModal({ hints, onWatchAd, onBuyHints, onClose }) {
 
 const SECTIONS = [
   { name: '입문', start: 1, end: 30, size: '5×5', color: 'var(--diff-beginner)', colorRaw: '#10B981' },
-  { name: '초급', start: 31, end: 60, size: '8×8', color: 'var(--diff-easy)', colorRaw: '#6C5CE7' },
-  { name: '중급', start: 61, end: 95, size: '10×10', color: 'var(--diff-medium)', colorRaw: '#8B5CF6' },
-  { name: '고급', start: 96, end: 120, size: '15×15', color: 'var(--diff-hard)', colorRaw: '#F97316' },
+  { name: '초급', start: 31, end: 70, size: '8×8', color: 'var(--diff-easy)', colorRaw: '#6C5CE7' },
+  { name: '중급', start: 71, end: 115, size: '10×10', color: 'var(--diff-medium)', colorRaw: '#8B5CF6' },
+  { name: '고급', start: 116, end: 150, size: '15×15', color: 'var(--diff-hard)', colorRaw: '#F97316' },
 ];
 
 function formatTime(ms) {
@@ -272,6 +272,7 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
                                 <div className="level-btn-completed-info">
                                   {levelStars && <StarsDisplay stars={levelStars} small />}
                                   {bestTime && <span className="level-btn-time">{formatTime(bestTime)}</span>}
+                                  {presetName && <span className="level-btn-name">{presetName}</span>}
                                 </div>
                               </>
                             ) : (

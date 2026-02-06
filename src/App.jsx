@@ -33,16 +33,28 @@ export default function App() {
   const [activeCollectionGame, setActiveCollectionGame] = useState(null); // { collectionId, tileRow, tileCol }
   const [homeTab, setHomeTab] = useState('puzzle'); // 'puzzle' | 'collection'
   const [homeScrollY, setHomeScrollY] = useState(0);
+  const [darkMode, setDarkMode] = useState(() => loadSettings().darkMode);
   const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive } = useGame();
 
   // Apply dark mode on initial load
   useEffect(() => {
     const settings = loadSettings();
+    setDarkMode(settings.darkMode);
     document.documentElement.setAttribute('data-theme', settings.darkMode ? 'dark' : 'light');
     const meta = document.querySelector('meta[name="theme-color"]');
     if (meta) {
       meta.setAttribute('content', settings.darkMode ? '#1A1A2E' : '#ffffff');
     }
+  }, []);
+
+  // Listen for dark mode changes via data-theme attribute
+  useEffect(() => {
+    const observer = new MutationObserver(() => {
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      setDarkMode(isDark);
+    });
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
   }, []);
 
   // Init audio on first user interaction
@@ -242,6 +254,7 @@ export default function App() {
           onGoHome={handleGoHome}
           onComplete={handleCollectionTileComplete}
           hints={appState.hints}
+          darkMode={darkMode}
           onUseHint={() => {
             if (appState.hints <= 0) return false;
             setAppState((prev) => ({
@@ -270,6 +283,7 @@ export default function App() {
           onRestartLevel={handleRestartLevel}
           onRevive={revive}
           hints={appState.hints}
+          darkMode={darkMode}
         />
       </div>
     );

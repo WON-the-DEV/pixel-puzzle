@@ -38,6 +38,7 @@ export default function GameCanvas({
   controllerMode = false,
   cursorRow = 0,
   cursorCol = 0,
+  darkMode = false,
 }) {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
@@ -325,7 +326,7 @@ export default function GameCanvas({
       ctx.lineWidth = 3;
       ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
     }
-  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol]);
+  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
   useEffect(() => {
     render();
