@@ -1,4 +1,4 @@
-import { useReducer, useCallback } from 'react';
+import { useReducer, useCallback, useEffect } from 'react';
 import {
   createPuzzleForLevel,
   checkSolution,
@@ -6,6 +6,7 @@ import {
   autoFillCompletedLines,
   getFilledCorrectCount,
 } from '../lib/puzzle.js';
+import { loadGameSave, saveGameProgress, clearGameSave } from '../lib/storage.js';
 
 // 0 = empty, 1 = filled, 2 = X mark, 3 = mistake flash (temporary)
 const INITIAL_STATE = {
@@ -55,6 +56,32 @@ function gameReducer(state, action) {
     case 'START_LEVEL': {
       const level = action.level;
       const puzzle = createPuzzleForLevel(level);
+
+      // 저장된 진행 상황 복원 시도
+      const saved = loadGameSave();
+      if (saved && saved.level === level && saved.playerGrid) {
+        const filledCorrect = getFilledCorrectCount(puzzle.solution, saved.playerGrid);
+        return {
+          ...state,
+          level,
+          puzzle,
+          playerGrid: saved.playerGrid,
+          mode: saved.mode || 'fill',
+          history: [cloneGrid(saved.playerGrid)],
+          historyIndex: 0,
+          startTime: Date.now() - (saved.elapsedTime || 0),
+          elapsedTime: saved.elapsedTime || 0,
+          isComplete: false,
+          lives: saved.lives != null ? saved.lives : 3,
+          maxLives: 3,
+          isGameOver: false,
+          autoXCells: [],
+          filledCorrect,
+          mistakeFlashCells: [],
+          usedRevive: saved.usedRevive || false,
+        };
+      }
+
       const playerGrid = createEmptyGrid(puzzle.size);
 
       // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
@@ -289,6 +316,7 @@ function gameReducer(state, action) {
     case 'RESTART_LEVEL': {
       const puzzle = state.puzzle;
       if (!puzzle) return state;
+      clearGameSave();
       const playerGrid = createEmptyGrid(puzzle.size);
 
       // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
@@ -329,6 +357,26 @@ function gameReducer(state, action) {
 
 export function useGame() {
   const [state, dispatch] = useReducer(gameReducer, INITIAL_STATE);
+
+  // 자동 저장: 게임 진행 중 셀 변경 시
+  useEffect(() => {
+    if (!state.puzzle || state.isComplete || state.isGameOver) {
+      // 완료/게임오버 시 저장 삭제
+      if (state.isComplete) clearGameSave();
+      return;
+    }
+    // playerGrid가 있을 때만 저장
+    if (state.playerGrid && state.playerGrid.length > 0) {
+      saveGameProgress({
+        level: state.level,
+        playerGrid: state.playerGrid,
+        mode: state.mode,
+        lives: state.lives,
+        elapsedTime: state.startTime ? Date.now() - state.startTime : 0,
+        usedRevive: state.usedRevive,
+      });
+    }
+  }, [state.playerGrid, state.level, state.isComplete, state.isGameOver, state.lives, state.mode]);
 
   const startLevel = useCallback((level) => {
     dispatch({ type: 'START_LEVEL', level });
