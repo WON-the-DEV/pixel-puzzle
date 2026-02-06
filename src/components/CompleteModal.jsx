@@ -1,4 +1,7 @@
+import { useState, useCallback } from 'react';
 import { CelebrationIcon, StarIcon, LightbulbIcon } from './icons/Icons.jsx';
+import { sharePuzzleResult } from '../lib/shareImage.js';
+import { calculateStreak } from '../lib/dailyChallenge.js';
 
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
@@ -14,7 +17,7 @@ function getSizeColor(size) {
   return '#f97316';
 }
 
-function PixelArt({ solution, size }) {
+function PixelArt({ solution, size, palette }) {
   const color = getSizeColor(size);
   const maxPx = 160;
   const cellPx = Math.floor(maxPx / size);
@@ -36,22 +39,62 @@ function PixelArt({ solution, size }) {
       }}
     >
       {solution.map((row, i) =>
-        row.map((cell, j) => (
-          <div
-            key={`${i}-${j}`}
-            style={{
-              width: cellPx,
-              height: cellPx,
-              background: cell === 1 ? color : 'var(--bg)',
-            }}
-          />
-        ))
+        row.map((cell, j) => {
+          let bg = 'var(--bg)';
+          if (cell > 0) {
+            if (palette && palette.length > 0) {
+              bg = palette[cell - 1] || color;
+            } else {
+              bg = color;
+            }
+          }
+          return (
+            <div
+              key={`${i}-${j}`}
+              style={{
+                width: cellPx,
+                height: cellPx,
+                background: bg,
+              }}
+            />
+          );
+        })
       )}
     </div>
   );
 }
 
 export default function CompleteModal({ level, time, puzzleName, stars = 0, onHome, onNext, puzzle, isDaily = false }) {
+  const [shareState, setShareState] = useState('idle'); // idle | sharing | shared | downloaded
+
+  const handleShare = useCallback(async () => {
+    if (!puzzle) return;
+    setShareState('sharing');
+    try {
+      const streak = isDaily ? calculateStreak() : 0;
+      const result = await sharePuzzleResult({
+        solution: puzzle.solution,
+        size: puzzle.size,
+        puzzleName: isDaily ? '오늘의 퍼즐' : puzzleName,
+        time,
+        stars,
+        palette: puzzle.palette,
+        isDaily,
+        streak: streak > 0 ? streak : undefined,
+      });
+      setShareState(result === 'shared' ? 'shared' : result === 'downloaded' ? 'downloaded' : 'idle');
+      // Reset after 2s
+      setTimeout(() => setShareState('idle'), 2000);
+    } catch {
+      setShareState('idle');
+    }
+  }, [puzzle, puzzleName, time, stars, isDaily]);
+
+  const shareLabel = shareState === 'sharing' ? '⏳ 생성 중...'
+    : shareState === 'shared' ? '✅ 공유 완료!'
+    : shareState === 'downloaded' ? '✅ 다운로드 완료!'
+    : '📤 공유하기';
+
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <div className="modal-content">
@@ -63,7 +106,7 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
 
         {/* 완성된 픽셀 아트 */}
         {puzzle && puzzle.solution && (
-          <PixelArt solution={puzzle.solution} size={puzzle.size} />
+          <PixelArt solution={puzzle.solution} size={puzzle.size} palette={puzzle.palette} />
         )}
 
         {/* 별점 */}
@@ -83,8 +126,8 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
 
         <div className="result-stats">
           <div className="result-stat">
-            <span className="result-stat-value">Level {level}</span>
-            <span className="result-stat-label">레벨</span>
+            <span className="result-stat-value">{isDaily ? '📅' : `Level ${level}`}</span>
+            <span className="result-stat-label">{isDaily ? '일일 챌린지' : '레벨'}</span>
           </div>
           <div className="result-divider" />
           <div className="result-stat">
@@ -114,6 +157,16 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
             </>
           )}
         </div>
+
+        {/* 공유 버튼 */}
+        <button
+          className="share-btn"
+          onClick={handleShare}
+          disabled={shareState === 'sharing'}
+          aria-label="결과 공유하기"
+        >
+          {shareLabel}
+        </button>
       </div>
     </div>
   );

@@ -1,4 +1,4 @@
-import { useMemo, useRef, useEffect, useCallback } from 'react';
+import { useMemo, useRef, useEffect, useCallback, useState } from 'react';
 import { COLLECTION_DATA } from '../lib/collections.js';
 import { DifficultyBadge } from './icons/Icons.jsx';
 
@@ -62,7 +62,6 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
         const ty = tr * tileH;
 
         if (isCompleted) {
-          // 완료된 타일: 컬러로 각 셀 그리기
           const startR = tr * tileSize;
           const startC = tc * tileSize;
           for (let r = 0; r < tileSize; r++) {
@@ -79,11 +78,9 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
             }
           }
         } else if (hasContent) {
-          // 미완료 타일: 약간 밝은 배경 + 번호 표시
           ctx.fillStyle = isDark ? '#253355' : '#E8E9EE';
           ctx.fillRect(tx + 1, ty + 1, tileW - 2, tileH - 2);
 
-          // 타일 번호
           const num = tr * tileCols + tc + 1;
           ctx.fillStyle = isDark ? 'rgba(255,255,255,0.35)' : 'rgba(0,0,0,0.2)';
           ctx.font = `bold ${Math.max(12, tileW * 0.25)}px -apple-system, system-ui, sans-serif`;
@@ -91,7 +88,6 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
           ctx.textBaseline = 'middle';
           ctx.fillText(num.toString(), tx + tileW / 2, ty + tileH / 2);
         }
-        // 콘텐츠 없는 타일: 배경만 (빈 공간)
       }
     }
 
@@ -120,7 +116,6 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
     return () => ob.disconnect();
   }, [render]);
 
-  // 클릭 → 타일 찾기 → 게임 시작
   const handleClick = useCallback((e) => {
     const canvas = canvasRef.current;
     const layout = layoutRef.current;
@@ -137,8 +132,8 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
 
     const tileKey = `${id}-${tr}-${tc}`;
     const isCompleted = completedTiles.has(tileKey);
-    if (isCompleted) return; // 이미 완료
-    if (!tileHasContent(tr, tc)) return; // 빈 타일
+    if (isCompleted) return;
+    if (!tileHasContent(tr, tc)) return;
 
     onStartTile(id, tr, tc);
   }, [id, tileRows, tileCols, completedTiles, tileHasContent, onStartTile]);
@@ -153,6 +148,64 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
   );
 }
 
+/**
+ * 미니 프리뷰 — 카드에 작은 컬렉션 프리뷰 표시
+ */
+function MiniPreview({ collection, completedTiles }) {
+  const canvasRef = useRef(null);
+  const { id, bigPicture, palette, tileRows, tileCols, tileSize } = collection;
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+
+    const previewSize = 52;
+    const totalCols = bigPicture[0].length;
+    const totalRows = bigPicture.length;
+    const cellSize = previewSize / Math.max(totalRows, totalCols);
+    const width = totalCols * cellSize;
+    const height = totalRows * cellSize;
+
+    const dpr = window.devicePixelRatio || 1;
+    canvas.width = previewSize * dpr;
+    canvas.height = previewSize * dpr;
+    canvas.style.width = `${previewSize}px`;
+    canvas.style.height = `${previewSize}px`;
+
+    const ctx = canvas.getContext('2d');
+    ctx.scale(dpr, dpr);
+
+    const ox = (previewSize - width) / 2;
+    const oy = (previewSize - height) / 2;
+
+    ctx.fillStyle = isDark ? '#1E2A45' : '#F0F1F5';
+    ctx.fillRect(0, 0, previewSize, previewSize);
+
+    for (let r = 0; r < totalRows; r++) {
+      for (let c = 0; c < totalCols; c++) {
+        const val = bigPicture[r][c];
+        // Check if this tile is completed
+        const tr = Math.floor(r / tileSize);
+        const tc = Math.floor(c / tileSize);
+        const tileKey = `${id}-${tr}-${tc}`;
+        const isCompleted = completedTiles.has(tileKey);
+
+        if (val > 0) {
+          if (isCompleted) {
+            ctx.fillStyle = palette[val - 1] || '#888';
+          } else {
+            ctx.fillStyle = isDark ? 'rgba(255,255,255,0.12)' : 'rgba(0,0,0,0.08)';
+          }
+          ctx.fillRect(ox + c * cellSize, oy + r * cellSize, cellSize, cellSize);
+        }
+      }
+    }
+  }, [bigPicture, palette, completedTiles, id, tileSize, tileRows, tileCols]);
+
+  return <canvas ref={canvasRef} style={{ borderRadius: 6 }} />;
+}
+
 const DIFF_COLORS = {
   '입문': '#10B981',
   '초급': '#6C5CE7',
@@ -161,84 +214,106 @@ const DIFF_COLORS = {
 };
 
 export default function CollectionView({ collectionProgress, onStartTile }) {
+  const [expandedId, setExpandedId] = useState(null);
+
   const completedTiles = useMemo(
     () => new Set(collectionProgress?.completedTiles || []),
     [collectionProgress]
   );
 
-  return (
-    <div className="collection-view">
-      {COLLECTION_DATA.map((collection) => {
-        // 콘텐츠 있는 타일 수 & 완료 수 계산
-        let filledTiles = 0;
-        let completedCount = 0;
-        for (let r = 0; r < collection.tileRows; r++) {
-          for (let c = 0; c < collection.tileCols; c++) {
-            const startR = r * collection.tileSize;
-            const startC = c * collection.tileSize;
-            let hasFilled = false;
-            for (let pr = startR; pr < startR + collection.tileSize && pr < collection.bigPicture.length; pr++) {
-              for (let pc = startC; pc < startC + collection.tileSize && pc < collection.bigPicture[0].length; pc++) {
-                if (collection.bigPicture[pr][pc] > 0) { hasFilled = true; break; }
-              }
-              if (hasFilled) break;
+  // 컬렉션별 진행 데이터 계산
+  const collectionStats = useMemo(() => {
+    return COLLECTION_DATA.map((collection) => {
+      let filledTiles = 0;
+      let completedCount = 0;
+      for (let r = 0; r < collection.tileRows; r++) {
+        for (let c = 0; c < collection.tileCols; c++) {
+          const startR = r * collection.tileSize;
+          const startC = c * collection.tileSize;
+          let hasFilled = false;
+          for (let pr = startR; pr < startR + collection.tileSize && pr < collection.bigPicture.length; pr++) {
+            for (let pc = startC; pc < startC + collection.tileSize && pc < collection.bigPicture[0].length; pc++) {
+              if (collection.bigPicture[pr][pc] > 0) { hasFilled = true; break; }
             }
-            if (hasFilled) {
-              filledTiles++;
-              if (completedTiles.has(`${collection.id}-${r}-${c}`)) completedCount++;
-            }
+            if (hasFilled) break;
+          }
+          if (hasFilled) {
+            filledTiles++;
+            if (completedTiles.has(`${collection.id}-${r}-${c}`)) completedCount++;
           }
         }
+      }
+      const isCollectionComplete = completedCount >= filledTiles && filledTiles > 0;
+      const progress = filledTiles > 0 ? Math.round((completedCount / filledTiles) * 100) : 0;
+      return { filledTiles, completedCount, isCollectionComplete, progress };
+    });
+  }, [completedTiles]);
 
-        const isCollectionComplete = completedCount >= filledTiles && filledTiles > 0;
-        const progress = filledTiles > 0 ? Math.round((completedCount / filledTiles) * 100) : 0;
-        const diffColor = DIFF_COLORS[collection.difficulty] || collection.color;
+  return (
+    <div className="collection-view">
+      {/* 2열 그리드 카드 */}
+      <div className="collection-grid-compact">
+        {COLLECTION_DATA.map((collection, idx) => {
+          const stats = collectionStats[idx];
+          const diffColor = DIFF_COLORS[collection.difficulty] || collection.color;
+          const isExpanded = expandedId === collection.id;
 
-        return (
-          <div className="collection-card" key={collection.id}>
-            {/* 헤더 */}
-            <div className="collection-card-header">
-              <div className="collection-card-info">
-                <span className="collection-emoji">{collection.emoji}</span>
-                <div>
-                  <h3 className="collection-name">{collection.name}</h3>
-                  <span className="collection-diff-badge" style={{ color: diffColor }}>
-                    <DifficultyBadge color={diffColor} label={collection.difficulty} size={8} />
-                    <span style={{ marginLeft: 4, fontSize: 11, color: 'var(--text-tertiary)' }}>
+          return (
+            <div key={collection.id}>
+              {/* 컴팩트 카드 */}
+              <div
+                className={`collection-compact-card ${stats.isCollectionComplete ? 'completed' : ''} ${isExpanded ? 'expanded' : ''}`}
+                onClick={() => setExpandedId(isExpanded ? null : collection.id)}
+                style={{ '--collection-color': collection.color }}
+              >
+                <MiniPreview collection={collection} completedTiles={completedTiles} />
+                <div className="collection-compact-info">
+                  <div className="collection-compact-top">
+                    <span className="collection-compact-name">
+                      {collection.emoji} {collection.name}
+                    </span>
+                    {stats.isCollectionComplete && (
+                      <span className="collection-compact-badge">✅</span>
+                    )}
+                  </div>
+                  <div className="collection-compact-meta">
+                    <DifficultyBadge color={diffColor} label={collection.difficulty} size={7} />
+                    <span style={{ fontSize: 11, color: 'var(--text-tertiary)', marginLeft: 4 }}>
                       {collection.tileSize}×{collection.tileSize}
                     </span>
-                  </span>
+                  </div>
+                  {/* 진행률 바 */}
+                  <div className="collection-compact-progress">
+                    <div className="collection-compact-progress-bar">
+                      <div
+                        className="collection-compact-progress-fill"
+                        style={{ width: `${stats.progress}%`, backgroundColor: collection.color }}
+                      />
+                    </div>
+                    <span className="collection-compact-progress-text" style={{ color: collection.color }}>
+                      {stats.completedCount}/{stats.filledTiles}
+                    </span>
+                  </div>
                 </div>
               </div>
-              {isCollectionComplete && (
-                <span className="collection-badge">완료!</span>
+
+              {/* 확장 뷰: 큰 그림 */}
+              {isExpanded && (
+                <div className="collection-expanded-view">
+                  <div className="collection-preview-wrapper" style={{ display: 'flex', justifyContent: 'center' }}>
+                    <InteractiveBigPicture
+                      collection={collection}
+                      completedTiles={completedTiles}
+                      onStartTile={onStartTile}
+                    />
+                  </div>
+                  <p className="collection-expanded-desc">{collection.description}</p>
+                </div>
               )}
             </div>
-
-            {/* 통합 그리드 (미리보기 + 스테이지 선택 합침) */}
-            <div className="collection-preview-wrapper" style={{ display: 'flex', justifyContent: 'center' }}>
-              <InteractiveBigPicture
-                collection={collection}
-                completedTiles={completedTiles}
-                onStartTile={onStartTile}
-              />
-            </div>
-
-            {/* 진행률 */}
-            <div className="collection-progress">
-              <div className="collection-progress-bar">
-                <div
-                  className="collection-progress-fill"
-                  style={{ width: `${progress}%`, backgroundColor: collection.color }}
-                />
-              </div>
-              <span className="collection-progress-text" style={{ color: collection.color }}>
-                {completedCount}/{filledTiles}
-              </span>
-            </div>
-          </div>
-        );
-      })}
+          );
+        })}
+      </div>
     </div>
   );
 }
