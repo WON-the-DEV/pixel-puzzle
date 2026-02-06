@@ -850,10 +850,254 @@ body {
 @media (min-width: 501px) {
   .home-screen,
   .game-screen,
-  .tutorial-screen {
+  .tutorial-screen,
+  .settings-screen {
     border-left: 1px solid var(--border);
     border-right: 1px solid var(--border);
   }
+}
+
+/* ═══════════════════════════════════════
+   Home Bottom Nav
+   ═══════════════════════════════════════ */
+
+.home-nav {
+  display: flex;
+  justify-content: space-around;
+  padding: 8px 12px calc(12px + var(--safe-bottom));
+  background: var(--surface);
+  border-top: 1px solid var(--border);
+  position: sticky;
+  bottom: 0;
+}
+
+.home-nav-item {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 2px;
+  padding: 8px 24px;
+  border-radius: 12px;
+  cursor: pointer;
+  transition: all 0.2s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.home-nav-item:active {
+  background: var(--bg);
+  transform: scale(0.95);
+}
+
+.home-nav-icon {
+  font-size: 22px;
+  line-height: 1;
+}
+
+.home-nav-label {
+  font-size: 11px;
+  font-weight: 600;
+  color: var(--text-secondary);
+}
+
+.home-nav-item.active .home-nav-label {
+  color: var(--primary);
+}
+
+/* ═══════════════════════════════════════
+   Settings Screen
+   ═══════════════════════════════════════ */
+
+.settings-screen {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+  max-width: 500px;
+  margin: 0 auto;
+  background: var(--bg);
+  overflow-y: auto;
+  -webkit-overflow-scrolling: touch;
+}
+
+.settings-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 12px 16px;
+  background: var(--surface);
+  border-bottom: 1px solid var(--border);
+  position: sticky;
+  top: 0;
+  z-index: 10;
+}
+
+.settings-title {
+  font-size: 18px;
+  font-weight: 700;
+}
+
+.settings-body {
+  flex: 1;
+  padding: 16px 20px 40px;
+}
+
+.settings-section {
+  margin-bottom: 24px;
+}
+
+.settings-section-title {
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--text-secondary);
+  margin-bottom: 8px;
+  padding-left: 4px;
+}
+
+.settings-item {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 14px 16px;
+  background: var(--surface);
+  border-radius: 14px;
+  margin-bottom: 6px;
+  cursor: pointer;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-item:active {
+  background: var(--bg);
+  transform: scale(0.98);
+}
+
+.settings-item.disabled {
+  opacity: 0.5;
+}
+
+.settings-item-left {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+}
+
+.settings-item-icon {
+  font-size: 22px;
+  width: 28px;
+  text-align: center;
+  flex-shrink: 0;
+}
+
+.settings-item-text {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.settings-item-label {
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+}
+
+.settings-item-desc {
+  font-size: 12px;
+  color: var(--text-secondary);
+}
+
+/* Toggle */
+.settings-toggle {
+  width: 48px;
+  height: 28px;
+  border-radius: 14px;
+  background: var(--border);
+  position: relative;
+  transition: background 0.25s;
+  flex-shrink: 0;
+}
+
+.settings-toggle.on {
+  background: var(--primary);
+}
+
+.settings-toggle-knob {
+  width: 22px;
+  height: 22px;
+  border-radius: 11px;
+  background: white;
+  position: absolute;
+  top: 3px;
+  left: 3px;
+  transition: transform 0.25s cubic-bezier(0.34, 1.56, 0.64, 1);
+  box-shadow: 0 1px 3px rgba(0, 0, 0, 0.15);
+}
+
+.settings-toggle.on .settings-toggle-knob {
+  transform: translateX(20px);
+}
+
+/* Action buttons */
+.settings-action-btn {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  width: 100%;
+  padding: 14px 16px;
+  background: var(--surface);
+  border: none;
+  border-radius: 14px;
+  font-size: 15px;
+  font-weight: 600;
+  color: var(--text);
+  cursor: pointer;
+  margin-bottom: 6px;
+  transition: all 0.15s;
+  -webkit-tap-highlight-color: transparent;
+}
+
+.settings-action-btn:active {
+  background: var(--bg);
+  transform: scale(0.98);
+}
+
+.settings-action-btn.danger {
+  color: var(--danger);
+}
+
+/* ═══════════════════════════════════════
+   Canvas Wrapper & Zoom
+   ═══════════════════════════════════════ */
+
+.canvas-wrapper {
+  position: relative;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  width: 100%;
+  height: 100%;
+}
+
+.canvas-wrapper.zoomable {
+  overflow: hidden;
+  touch-action: none;
+}
+
+.zoom-indicator {
+  position: absolute;
+  top: 12px;
+  right: 12px;
+  background: rgba(0, 0, 0, 0.6);
+  color: white;
+  font-size: 12px;
+  font-weight: 600;
+  padding: 4px 10px;
+  border-radius: 12px;
+  pointer-events: none;
+  animation: zoomFadeIn 0.2s ease;
+}
+
+@keyframes zoomFadeIn {
+  from { opacity: 0; transform: scale(0.9); }
+  to { opacity: 1; transform: scale(1); }
 }
 
 /* Small screens */

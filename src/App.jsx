@@ -2,8 +2,10 @@ import { useState, useCallback, useEffect } from 'react';
 import HomeScreen from './components/HomeScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import TutorialScreen from './components/TutorialScreen.jsx';
+import SettingsScreen from './components/SettingsScreen.jsx';
 import { useGame } from './hooks/useGame.js';
 import { loadAppState, saveAppState } from './lib/storage.js';
+import { initAudio } from './lib/sound.js';
 
 function hasSeenTutorial() {
   try {
@@ -22,9 +24,24 @@ function markTutorialSeen() {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState(() => hasSeenTutorial() ? 'home' : 'tutorial'); // 'tutorial' | 'home' | 'game'
+  const [screen, setScreen] = useState(() => hasSeenTutorial() ? 'home' : 'tutorial'); // 'tutorial' | 'home' | 'game' | 'settings'
   const [appState, setAppState] = useState(loadAppState);
   const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint } = useGame();
+
+  // Init audio on first user interaction
+  useEffect(() => {
+    const handler = () => {
+      initAudio();
+      document.removeEventListener('touchstart', handler);
+      document.removeEventListener('click', handler);
+    };
+    document.addEventListener('touchstart', handler, { once: true });
+    document.addEventListener('click', handler, { once: true });
+    return () => {
+      document.removeEventListener('touchstart', handler);
+      document.removeEventListener('click', handler);
+    };
+  }, []);
 
   // Save app state when it changes
   useEffect(() => {
@@ -71,6 +88,14 @@ export default function App() {
     startLevel(nextLevel);
   }, [gameState.level, startLevel]);
 
+  const handleOpenSettings = useCallback(() => {
+    setScreen('settings');
+  }, []);
+
+  const handleResetTutorial = useCallback(() => {
+    setScreen('tutorial');
+  }, []);
+
   // Save on visibility change
   useEffect(() => {
     const onVisibilityChange = () => {
@@ -86,6 +111,14 @@ export default function App() {
     return (
       <div className="screen-transition fade-in">
         <TutorialScreen onComplete={handleTutorialComplete} />
+      </div>
+    );
+  }
+
+  if (screen === 'settings') {
+    return (
+      <div className="screen-transition fade-in" key="settings">
+        <SettingsScreen onGoHome={handleGoHome} onResetTutorial={handleResetTutorial} />
       </div>
     );
   }
@@ -111,7 +144,7 @@ export default function App() {
 
   return (
     <div className="screen-transition fade-in" key="home">
-      <HomeScreen appState={appState} onStartLevel={handleStartLevel} />
+      <HomeScreen appState={appState} onStartLevel={handleStartLevel} onOpenSettings={handleOpenSettings} />
     </div>
   );
 }

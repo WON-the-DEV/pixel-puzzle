@@ -1,6 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GameCanvas from './GameCanvas.jsx';
 import CompleteModal from './CompleteModal.jsx';
+import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint } from '../lib/sound.js';
+import { hapticFill, hapticLineComplete, hapticPuzzleComplete } from '../lib/haptic.js';
+import { isRowComplete, isColComplete } from '../lib/puzzle.js';
+import { loadSettings } from '../lib/settings.js';
 
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
@@ -24,6 +28,10 @@ export default function GameScreen({
   const { puzzle, playerGrid, mode, hints, level, startTime, isComplete, elapsedTime } = gameState;
   const [displayTime, setDisplayTime] = useState('00:00');
   const timerRef = useRef(null);
+  const prevCompleteRowsRef = useRef(new Set());
+  const prevCompleteColsRef = useRef(new Set());
+  const wasCompleteRef = useRef(false);
+  const settings = loadSettings();
 
   // Timer
   useEffect(() => {
@@ -43,6 +51,82 @@ export default function GameScreen({
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, [startTime, isComplete, elapsedTime]);
+
+  // Track row/col completion for sound/haptic
+  useEffect(() => {
+    if (!puzzle || !playerGrid) return;
+
+    // Check puzzle complete
+    if (isComplete && !wasCompleteRef.current) {
+      wasCompleteRef.current = true;
+      playPuzzleComplete();
+      hapticPuzzleComplete();
+      return;
+    }
+
+    // Check row/col completions
+    const completeRows = new Set();
+    const completeCols = new Set();
+    for (let i = 0; i < puzzle.size; i++) {
+      if (isRowComplete(puzzle.rowClues, playerGrid, i)) completeRows.add(i);
+      if (isColComplete(puzzle.colClues, playerGrid, i)) completeCols.add(i);
+    }
+
+    // Find newly completed
+    let newlyCompleted = false;
+    for (const r of completeRows) {
+      if (!prevCompleteRowsRef.current.has(r)) {
+        newlyCompleted = true;
+        break;
+      }
+    }
+    if (!newlyCompleted) {
+      for (const c of completeCols) {
+        if (!prevCompleteColsRef.current.has(c)) {
+          newlyCompleted = true;
+          break;
+        }
+      }
+    }
+
+    if (newlyCompleted && !isComplete) {
+      playLineComplete();
+      hapticLineComplete();
+    }
+
+    prevCompleteRowsRef.current = completeRows;
+    prevCompleteColsRef.current = completeCols;
+  }, [puzzle, playerGrid, isComplete]);
+
+  // Reset refs on level change
+  useEffect(() => {
+    prevCompleteRowsRef.current = new Set();
+    prevCompleteColsRef.current = new Set();
+    wasCompleteRef.current = false;
+  }, [level]);
+
+  // Wrapped handlers with sound/haptic
+  const handleToggleCell = useCallback((row, col) => {
+    if (isComplete) return;
+    const current = playerGrid[row][col];
+    if (mode === 'fill') {
+      playFill();
+    } else {
+      playMark();
+    }
+    hapticFill();
+    onToggleCell(row, col);
+  }, [onToggleCell, playerGrid, mode, isComplete]);
+
+  const handleUndo = useCallback(() => {
+    playUndo();
+    onUndo();
+  }, [onUndo]);
+
+  const handleUseHint = useCallback(() => {
+    playHint();
+    onUseHint();
+  }, [onUseHint]);
 
   if (!puzzle) return null;
 
@@ -71,21 +155,22 @@ export default function GameScreen({
           puzzle={puzzle}
           playerGrid={playerGrid}
           mode={mode}
-          onToggleCell={onToggleCell}
+          onToggleCell={handleToggleCell}
           onFillCell={onFillCell}
           onEndDrag={onEndDrag}
           isComplete={isComplete}
+          showMistakes={settings.showMistakes}
         />
       </main>
 
       {/* Controls */}
       <footer className="controls">
-        <button className="control-btn" onClick={onUseHint} disabled={hints <= 0 || isComplete}>
+        <button className="control-btn" onClick={handleUseHint} disabled={hints <= 0 || isComplete}>
           <span className="icon">💡</span>
           <span className="label">힌트</span>
           {hints > 0 && <span className="count">{hints}</span>}
         </button>
-        <button className="control-btn" onClick={onUndo}>
+        <button className="control-btn" onClick={handleUndo}>
           <span className="icon">↩️</span>
           <span className="label">실행취소</span>
         </button>

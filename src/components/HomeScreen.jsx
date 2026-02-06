@@ -8,7 +8,7 @@ const SECTIONS = [
   { name: '고급', start: 31, end: 50, size: '15×15', color: '#f97316', emoji: '🔥' },
 ];
 
-export default function HomeScreen({ appState, onStartLevel }) {
+export default function HomeScreen({ appState, onStartLevel, onOpenSettings }) {
   const { completedLevels = [], currentLevel = 1 } = appState;
   const completedSet = useMemo(() => new Set(completedLevels), [completedLevels]);
 
@@ -74,6 +74,18 @@ export default function HomeScreen({ appState, onStartLevel }) {
           </div>
         ))}
       </div>
+
+      {/* Bottom nav */}
+      <nav className="home-nav">
+        <div className="home-nav-item active">
+          <span className="home-nav-icon">🧩</span>
+          <span className="home-nav-label">퍼즐</span>
+        </div>
+        <div className="home-nav-item" onClick={onOpenSettings}>
+          <span className="home-nav-icon">⚙️</span>
+          <span className="home-nav-label">설정</span>
+        </div>
+      </nav>
     </div>
   );
 }
