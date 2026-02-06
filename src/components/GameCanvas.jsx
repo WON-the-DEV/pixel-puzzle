@@ -270,23 +270,6 @@ export default function GameCanvas({
     return () => observer.disconnect();
   }, [render]);
 
-  // Register native touch listeners (non-passive) to fix mobile single-tap
-  useEffect(() => {
-    const canvas = canvasRef.current;
-    if (!canvas) return;
-    const opts = { passive: false };
-    canvas.addEventListener('touchstart', handlePointerDown, opts);
-    canvas.addEventListener('touchmove', handlePointerMove, opts);
-    canvas.addEventListener('touchend', handlePointerUp, opts);
-    canvas.addEventListener('touchcancel', handlePointerUp, opts);
-    return () => {
-      canvas.removeEventListener('touchstart', handlePointerDown, opts);
-      canvas.removeEventListener('touchmove', handlePointerMove, opts);
-      canvas.removeEventListener('touchend', handlePointerUp, opts);
-      canvas.removeEventListener('touchcancel', handlePointerUp, opts);
-    };
-  }, [handlePointerDown, handlePointerMove, handlePointerUp]);
-
   const getCellAt = useCallback((clientX, clientY) => {
     const canvas = canvasRef.current;
     const layout = layoutRef.current;
@@ -482,6 +465,23 @@ export default function GameCanvas({
     },
     [onEndDrag, onToggleCell, render, isComplete]
   );
+
+  // Register native touch listeners (non-passive) to fix mobile single-tap
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const opts = { passive: false };
+    canvas.addEventListener('touchstart', handlePointerDown, opts);
+    canvas.addEventListener('touchmove', handlePointerMove, opts);
+    canvas.addEventListener('touchend', handlePointerUp, opts);
+    canvas.addEventListener('touchcancel', handlePointerUp, opts);
+    return () => {
+      canvas.removeEventListener('touchstart', handlePointerDown, opts);
+      canvas.removeEventListener('touchmove', handlePointerMove, opts);
+      canvas.removeEventListener('touchend', handlePointerUp, opts);
+      canvas.removeEventListener('touchcancel', handlePointerUp, opts);
+    };
+  }, [handlePointerDown, handlePointerMove, handlePointerUp]);
 
   return (
     <div
