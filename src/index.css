@@ -2378,6 +2378,7 @@ body {
 
 /* Bug 3: controller controls — more breathing room */
 .controller-controls {
+  flex-direction: column;
   padding: 4px 6px calc(6px + var(--safe-bottom));
   background: var(--surface-raised, var(--surface));
   border-top: 1px solid var(--border-light);
