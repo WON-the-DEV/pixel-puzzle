@@ -44,3 +44,18 @@ export function hapticPuzzleComplete() {
 export function hapticTap() {
   vibrate(5);
 }
+
+/** 라이프 감소 - 강한 진동 */
+export function hapticLifeLost() {
+  vibrate([40, 30, 40]);
+}
+
+/** 게임 오버 - 긴 진동 */
+export function hapticGameOver() {
+  vibrate([50, 40, 50, 40, 80]);
+}
+
+/** 자동 X - 약한 진동 */
+export function hapticAutoX() {
+  vibrate(8);
+}

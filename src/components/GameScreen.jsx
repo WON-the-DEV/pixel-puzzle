@@ -1,9 +1,10 @@
 import { useState, useEffect, useRef, useCallback } from 'react';
 import GameCanvas from './GameCanvas.jsx';
 import CompleteModal from './CompleteModal.jsx';
-import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint } from '../lib/sound.js';
-import { hapticFill, hapticLineComplete, hapticPuzzleComplete } from '../lib/haptic.js';
-import { isRowComplete, isColComplete } from '../lib/puzzle.js';
+import GameOverModal from './GameOverModal.jsx';
+import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, playHint, playLifeLost, playGameOver, playAutoX } from '../lib/sound.js';
+import { hapticFill, hapticLineComplete, hapticPuzzleComplete, hapticLifeLost, hapticGameOver, hapticAutoX } from '../lib/haptic.js';
+import { isRowComplete, isColComplete, calculateStars } from '../lib/puzzle.js';
 import { loadSettings } from '../lib/settings.js';
 
 function formatTime(ms) {
@@ -24,19 +25,22 @@ export default function GameScreen({
   onUseHint,
   onGoHome,
   onNextLevel,
+  onRestartLevel,
+  hints,
 }) {
-  const { puzzle, playerGrid, mode, hints, level, startTime, isComplete, elapsedTime } = gameState;
+  const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife } = gameState;
   const [displayTime, setDisplayTime] = useState('00:00');
   const timerRef = useRef(null);
   const prevCompleteRowsRef = useRef(new Set());
   const prevCompleteColsRef = useRef(new Set());
   const wasCompleteRef = useRef(false);
+  const wasGameOverRef = useRef(false);
   const settings = loadSettings();
 
   // Timer
   useEffect(() => {
-    if (isComplete) {
-      setDisplayTime(formatTime(elapsedTime));
+    if (isComplete || isGameOver) {
+      if (isComplete) setDisplayTime(formatTime(elapsedTime));
       if (timerRef.current) clearInterval(timerRef.current);
       return;
     }
@@ -50,7 +54,32 @@ export default function GameScreen({
     return () => {
       if (timerRef.current) clearInterval(timerRef.current);
     };
-  }, [startTime, isComplete, elapsedTime]);
+  }, [startTime, isComplete, elapsedTime, isGameOver]);
+
+  // Track life loss sound/haptic
+  useEffect(() => {
+    if (lostLife && !isGameOver) {
+      playLifeLost();
+      hapticLifeLost();
+    }
+  }, [lostLife, lives, isGameOver]);
+
+  // Track game over sound/haptic
+  useEffect(() => {
+    if (isGameOver && !wasGameOverRef.current) {
+      wasGameOverRef.current = true;
+      playGameOver();
+      hapticGameOver();
+    }
+  }, [isGameOver]);
+
+  // Track auto X sound/haptic
+  useEffect(() => {
+    if (autoXCells && autoXCells.length > 0 && !isComplete) {
+      playAutoX();
+      hapticAutoX();
+    }
+  }, [autoXCells, isComplete]);
 
   // Track row/col completion for sound/haptic
   useEffect(() => {
@@ -103,12 +132,12 @@ export default function GameScreen({
     prevCompleteRowsRef.current = new Set();
     prevCompleteColsRef.current = new Set();
     wasCompleteRef.current = false;
+    wasGameOverRef.current = false;
   }, [level]);
 
   // Wrapped handlers with sound/haptic
   const handleToggleCell = useCallback((row, col) => {
-    if (isComplete) return;
-    const current = playerGrid[row][col];
+    if (isComplete || isGameOver) return;
     if (mode === 'fill') {
       playFill();
     } else {
@@ -116,7 +145,7 @@ export default function GameScreen({
     }
     hapticFill();
     onToggleCell(row, col);
-  }, [onToggleCell, playerGrid, mode, isComplete]);
+  }, [onToggleCell, mode, isComplete, isGameOver]);
 
   const handleUndo = useCallback(() => {
     playUndo();
@@ -129,6 +158,9 @@ export default function GameScreen({
   }, [onUseHint]);
 
   if (!puzzle) return null;
+
+  const progressPercent = puzzle.totalFilled > 0 ? Math.round((filledCorrect / puzzle.totalFilled) * 100) : 0;
+  const stars = isComplete ? calculateStars(level, elapsedTime) : 0;
 
   return (
     <div className="game-screen">
@@ -146,8 +178,28 @@ export default function GameScreen({
           </span>
           <span className="level-size">{puzzle.size}×{puzzle.size}</span>
         </div>
-        <div className="timer">{displayTime}</div>
+        <div className="header-right">
+          <div className="lives-display">
+            {Array.from({ length: maxLives }, (_, i) => (
+              <span key={i} className={`life-heart ${i < lives ? 'active' : 'lost'}`}>
+                {i < lives ? '❤️' : '🖤'}
+              </span>
+            ))}
+          </div>
+          <div className="timer">{displayTime}</div>
+        </div>
       </header>
+
+      {/* Progress bar */}
+      <div className="progress-bar-container">
+        <div className="progress-bar">
+          <div
+            className="progress-fill"
+            style={{ width: `${progressPercent}%` }}
+          />
+        </div>
+        <span className="progress-text">{filledCorrect}/{puzzle.totalFilled}</span>
+      </div>
 
       {/* Canvas */}
       <main className="game-container">
@@ -160,30 +212,40 @@ export default function GameScreen({
           onEndDrag={onEndDrag}
           isComplete={isComplete}
           showMistakes={settings.showMistakes}
+          autoXCells={autoXCells}
         />
       </main>
 
       {/* Controls */}
       <footer className="controls">
-        <button className="control-btn" onClick={handleUseHint} disabled={hints <= 0 || isComplete}>
+        <button className="control-btn" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver}>
           <span className="icon">💡</span>
           <span className="label">힌트</span>
           {hints > 0 && <span className="count">{hints}</span>}
         </button>
-        <button className="control-btn" onClick={handleUndo}>
+        <button className="control-btn" onClick={handleUndo} disabled={isGameOver}>
           <span className="icon">↩️</span>
           <span className="label">실행취소</span>
         </button>
-        <button className="control-btn" onClick={onRedo}>
+        <button className="control-btn" onClick={onRedo} disabled={isGameOver}>
           <span className="icon">↪️</span>
           <span className="label">다시실행</span>
         </button>
         <button
-          className={`control-btn ${mode === 'mark' ? 'active-mode' : ''}`}
+          className={`control-btn mode-toggle ${mode === 'fill' ? 'mode-fill' : 'mode-mark'}`}
           onClick={onToggleMode}
+          disabled={isGameOver}
         >
-          <span className="icon">{mode === 'fill' ? '✏️' : '❌'}</span>
-          <span className="label">{mode === 'fill' ? '색칠' : 'X표시'}</span>
+          <div className="mode-toggle-inner">
+            <div className={`mode-option ${mode === 'fill' ? 'active' : ''}`}>
+              <span className="mode-icon">✏️</span>
+              <span className="mode-label">색칠</span>
+            </div>
+            <div className={`mode-option ${mode === 'mark' ? 'active' : ''}`}>
+              <span className="mode-icon">✕</span>
+              <span className="mode-label">X표시</span>
+            </div>
+          </div>
         </button>
       </footer>
 
@@ -193,8 +255,18 @@ export default function GameScreen({
           level={level}
           time={elapsedTime}
           puzzleName={puzzle.name}
+          stars={stars}
           onHome={onGoHome}
           onNext={onNextLevel}
+        />
+      )}
+
+      {/* Game Over Modal */}
+      {isGameOver && (
+        <GameOverModal
+          level={level}
+          onRestart={onRestartLevel}
+          onHome={onGoHome}
         />
       )}
     </div>

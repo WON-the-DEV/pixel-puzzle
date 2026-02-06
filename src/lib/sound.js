@@ -117,6 +117,32 @@ export function playHint() {
   ]);
 }
 
+/** 라이프 감소 - 경고음 */
+export function playLifeLost() {
+  playNotes([
+    { freq: 400, start: 0, dur: 0.15, type: 'sawtooth', vol: 0.1 },
+    { freq: 300, start: 0.12, dur: 0.2, type: 'sawtooth', vol: 0.08 },
+  ]);
+}
+
+/** 게임 오버 - 실패 사운드 */
+export function playGameOver() {
+  playNotes([
+    { freq: 400, start: 0, dur: 0.2, type: 'sawtooth', vol: 0.12 },
+    { freq: 350, start: 0.15, dur: 0.2, type: 'sawtooth', vol: 0.1 },
+    { freq: 300, start: 0.3, dur: 0.2, type: 'sawtooth', vol: 0.08 },
+    { freq: 200, start: 0.45, dur: 0.4, type: 'sawtooth', vol: 0.1 },
+  ]);
+}
+
+/** 자동 X 표시 - 부드러운 연쇄 사운드 */
+export function playAutoX() {
+  playNotes([
+    { freq: 600, start: 0, dur: 0.06, type: 'sine', vol: 0.05 },
+    { freq: 800, start: 0.04, dur: 0.06, type: 'sine', vol: 0.06 },
+  ]);
+}
+
 /** 오디오 컨텍스트 초기화 (사용자 제스처 시 호출) */
 export function initAudio() {
   try {

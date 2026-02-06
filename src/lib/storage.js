@@ -9,6 +9,8 @@ const DEFAULT_STATE = {
   currentLevel: 1,
   completedLevels: [],
   bestTimes: {},
+  bestStars: {},
+  hints: 3, // 글로벌 힌트 잔여
 };
 
 export function loadAppState() {
@@ -52,7 +54,7 @@ export function saveGameProgress(data) {
 export function clearGameSave() {
   try {
     localStorage.removeItem(GAME_SAVE_KEY);
-  } catch (e) {
+  } catch {
     // ignore
   }
 }

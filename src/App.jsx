@@ -6,6 +6,7 @@ import SettingsScreen from './components/SettingsScreen.jsx';
 import { useGame } from './hooks/useGame.js';
 import { loadAppState, saveAppState } from './lib/storage.js';
 import { initAudio } from './lib/sound.js';
+import { calculateStars } from './lib/puzzle.js';
 
 function hasSeenTutorial() {
   try {
@@ -24,9 +25,9 @@ function markTutorialSeen() {
 }
 
 export default function App() {
-  const [screen, setScreen] = useState(() => hasSeenTutorial() ? 'home' : 'tutorial'); // 'tutorial' | 'home' | 'game' | 'settings'
+  const [screen, setScreen] = useState(() => hasSeenTutorial() ? 'home' : 'tutorial');
   const [appState, setAppState] = useState(loadAppState);
-  const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint } = useGame();
+  const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint, clearAutoX, restartLevel } = useGame();
 
   // Init audio on first user interaction
   useEffect(() => {
@@ -48,7 +49,7 @@ export default function App() {
     saveAppState(appState);
   }, [appState]);
 
-  // Handle level completion
+  // Handle level completion — update state + award hint
   useEffect(() => {
     if (gameState.isComplete && gameState.puzzle) {
       setAppState((prev) => {
@@ -61,7 +62,18 @@ export default function App() {
         if (!prevBest || gameState.elapsedTime < prevBest) {
           bestTimes[gameState.level] = gameState.elapsedTime;
         }
-        return { ...prev, completedLevels, currentLevel, bestTimes };
+        // 별점 기록
+        const bestStars = { ...prev.bestStars };
+        const stars = calculateStars(gameState.level, gameState.elapsedTime);
+        const prevStars = bestStars[gameState.level];
+        if (!prevStars || stars > prevStars) {
+          bestStars[gameState.level] = stars;
+        }
+        // 힌트 보상: 레벨 완료 시 +1 (첫 완료만)
+        const hints = prev.completedLevels.includes(gameState.level)
+          ? prev.hints
+          : prev.hints + 1;
+        return { ...prev, completedLevels, currentLevel, bestTimes, bestStars, hints };
       });
     }
   }, [gameState.isComplete, gameState.level, gameState.elapsedTime, gameState.puzzle]);
@@ -94,6 +106,39 @@ export default function App() {
 
   const handleResetTutorial = useCallback(() => {
     setScreen('tutorial');
+  }, []);
+
+  const handleRestartLevel = useCallback(() => {
+    restartLevel();
+  }, [restartLevel]);
+
+  const handleUseHint = useCallback(() => {
+    if (appState.hints <= 0) return;
+    setAppState((prev) => ({
+      ...prev,
+      hints: Math.max(0, prev.hints - 1),
+    }));
+    useHint();
+  }, [appState.hints, useHint]);
+
+  // 광고 시청 (placeholder)
+  const handleWatchAd = useCallback(() => {
+    // TODO: 실제 광고 SDK 연동
+    setAppState((prev) => ({
+      ...prev,
+      hints: prev.hints + 1,
+    }));
+    alert('광고 시청 완료! 힌트 +1 💡');
+  }, []);
+
+  // 힌트 구매 (placeholder)
+  const handleBuyHints = useCallback(() => {
+    // TODO: 실제 인앱 결제 연동
+    setAppState((prev) => ({
+      ...prev,
+      hints: prev.hints + 5,
+    }));
+    alert('힌트 5개 구매 완료! 💎');
   }, []);
 
   // Save on visibility change
@@ -134,9 +179,11 @@ export default function App() {
           onToggleMode={toggleMode}
           onUndo={undo}
           onRedo={redo}
-          onUseHint={useHint}
+          onUseHint={handleUseHint}
           onGoHome={handleGoHome}
           onNextLevel={handleNextLevel}
+          onRestartLevel={handleRestartLevel}
+          hints={appState.hints}
         />
       </div>
     );
@@ -144,7 +191,13 @@ export default function App() {
 
   return (
     <div className="screen-transition fade-in" key="home">
-      <HomeScreen appState={appState} onStartLevel={handleStartLevel} onOpenSettings={handleOpenSettings} />
+      <HomeScreen
+        appState={appState}
+        onStartLevel={handleStartLevel}
+        onOpenSettings={handleOpenSettings}
+        onWatchAd={handleWatchAd}
+        onBuyHints={handleBuyHints}
+      />
     </div>
   );
 }

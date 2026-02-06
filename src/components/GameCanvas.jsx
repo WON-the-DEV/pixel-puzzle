@@ -12,12 +12,18 @@ const COLORS = {
   highlightBg: 'rgba(49, 130, 246, 0.08)',
   mistakeBg: 'rgba(239, 68, 68, 0.15)',
   mistakeBorder: '#ef4444',
+  autoXMark: '#3182f6',
 };
 
 const FONTS = {
   clue: 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif',
   clueSmall: 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif',
 };
+
+// 드래그 시작 최소 거리 (px)
+const DRAG_THRESHOLD = 8;
+// 싱글 탭 최대 시간 (ms)
+const TAP_MAX_TIME = 300;
 
 export default function GameCanvas({
   puzzle,
@@ -28,20 +34,43 @@ export default function GameCanvas({
   onEndDrag,
   isComplete,
   showMistakes = false,
+  autoXCells = [],
 }) {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
-  const dragRef = useRef({ isDragging: false, dragValue: null });
+  const interactionRef = useRef({
+    isDown: false,
+    isDragging: false,
+    dragValue: null,
+    startCell: null,
+    startTime: 0,
+    startX: 0,
+    startY: 0,
+    longPressTimer: null,
+    isLongPress: false,
+  });
   const highlightRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
+  const autoXAnimRef = useRef(new Set());
 
   // Zoom/pan state for large puzzles
   const zoomRef = useRef({ scale: 1, offsetX: 0, offsetY: 0, isPinching: false, startDist: 0, startScale: 1 });
-  const panRef = useRef({ isPanning: false, startX: 0, startY: 0, startOX: 0, startOY: 0 });
   const [zoomLevel, setZoomLevel] = useState(1);
   const lastTapRef = useRef(0);
 
   const needsZoom = puzzle && puzzle.size >= 10;
+
+  // Track auto X cells for animation
+  useEffect(() => {
+    if (autoXCells.length > 0) {
+      autoXAnimRef.current = new Set(autoXCells.map(c => `${c.row}-${c.col}`));
+      // Clear animation markers after animation duration
+      const timer = setTimeout(() => {
+        autoXAnimRef.current = new Set();
+      }, 600);
+      return () => clearTimeout(timer);
+    }
+  }, [autoXCells]);
 
   // Calculate layout based on puzzle size
   const getLayout = useCallback(() => {
@@ -151,6 +180,8 @@ export default function GameCanvas({
     }
 
     // ── Cells ──
+    const animatingAutoX = autoXAnimRef.current;
+
     for (let i = 0; i < size; i++) {
       for (let j = 0; j < size; j++) {
         const cell = playerGrid[i][j];
@@ -193,7 +224,8 @@ export default function GameCanvas({
           ctx.fill();
         } else if (cell === 2) {
           // X mark
-          ctx.strokeStyle = COLORS.clueComplete;
+          const isAutoX = animatingAutoX.has(`${i}-${j}`);
+          ctx.strokeStyle = isAutoX ? COLORS.autoXMark : COLORS.clueComplete;
           ctx.lineWidth = 2;
           ctx.lineCap = 'round';
           const m = cellSize * 0.28;
@@ -207,7 +239,7 @@ export default function GameCanvas({
         }
       }
     }
-  }, [puzzle, playerGrid, getLayout, showMistakes, isComplete]);
+  }, [puzzle, playerGrid, getLayout, showMistakes, isComplete, autoXCells]);
 
   // Render on state changes
   useEffect(() => {
@@ -235,11 +267,8 @@ export default function GameCanvas({
 
     if (wrapper && needsZoom) {
       const wrapperRect = wrapper.getBoundingClientRect();
-      // Convert screen coords to canvas coords considering transform
       const rawX = clientX - wrapperRect.left;
       const rawY = clientY - wrapperRect.top;
-      // The canvas is transformed: scale(zoom.scale) translate(zoom.offsetX, zoom.offsetY)
-      // So canvas coords = (screen coords - wrapper offset) / scale - offset
       x = rawX / zoom.scale - zoom.offsetX;
       y = rawY / zoom.scale - zoom.offsetY;
     } else {
@@ -266,19 +295,17 @@ export default function GameCanvas({
     if (!needsZoom) return;
 
     if (e.touches.length === 2) {
-      // Pinch start
       e.preventDefault();
       const dist = getTouchDist(e.touches);
       zoomRef.current.isPinching = true;
       zoomRef.current.startDist = dist;
       zoomRef.current.startScale = zoomRef.current.scale;
-      dragRef.current.isDragging = false; // cancel cell drag
+      interactionRef.current.isDown = false;
+      interactionRef.current.isDragging = false;
+      clearLongPressTimer();
     } else if (e.touches.length === 1 && zoomRef.current.scale > 1) {
-      // Pan start (only when zoomed)
-      // Check for double-tap to reset zoom
       const now = Date.now();
       if (now - lastTapRef.current < 300) {
-        // Double tap - reset zoom
         zoomRef.current = { scale: 1, offsetX: 0, offsetY: 0, isPinching: false, startDist: 0, startScale: 1 };
         setZoomLevel(1);
         applyTransform();
@@ -308,7 +335,6 @@ export default function GameCanvas({
     if (!needsZoom) return;
     zoomRef.current.isPinching = false;
 
-    // Snap to 1x if close
     if (zoomRef.current.scale < 1.1) {
       zoomRef.current = { scale: 1, offsetX: 0, offsetY: 0, isPinching: false, startDist: 0, startScale: 1 };
       setZoomLevel(1);
@@ -326,24 +352,39 @@ export default function GameCanvas({
     canvas.style.transformOrigin = 'center center';
   }, []);
 
-  // Pointer handlers
+  const clearLongPressTimer = () => {
+    if (interactionRef.current.longPressTimer) {
+      clearTimeout(interactionRef.current.longPressTimer);
+      interactionRef.current.longPressTimer = null;
+    }
+  };
+
+  // ── Pointer handlers with proper single-tap and drag detection ──
   const handlePointerDown = useCallback(
     (e) => {
       if (isComplete) return;
       if (zoomRef.current.isPinching) return;
       const touch = e.touches ? e.touches[0] : e;
-      if (e.touches && e.touches.length > 1) return; // multi-touch = zoom, not draw
+      if (e.touches && e.touches.length > 1) return;
       if (e.touches) e.preventDefault();
+
       const cell = getCellAt(touch.clientX, touch.clientY);
-      if (cell) {
-        onToggleCell(cell.row, cell.col);
-        const current = playerGrid[cell.row][cell.col];
-        const newVal = mode === 'fill' ? (current === 1 ? 0 : 1) : (current === 2 ? 0 : 2);
-        dragRef.current = { isDragging: true, dragValue: newVal };
-        highlightRef.current = { row: cell.row, col: cell.col };
-      }
+      if (!cell) return;
+
+      const interaction = interactionRef.current;
+      interaction.isDown = true;
+      interaction.isDragging = false;
+      interaction.startCell = cell;
+      interaction.startTime = Date.now();
+      interaction.startX = touch.clientX;
+      interaction.startY = touch.clientY;
+      interaction.dragValue = null;
+      interaction.isLongPress = false;
+
+      highlightRef.current = { row: cell.row, col: cell.col };
+      render();
     },
-    [getCellAt, onToggleCell, playerGrid, mode, isComplete]
+    [getCellAt, isComplete, render]
   );
 
   const handlePointerMove = useCallback(
@@ -352,28 +393,73 @@ export default function GameCanvas({
       const touch = e.touches ? e.touches[0] : e;
       if (e.touches && e.touches.length > 1) return;
       if (e.touches) e.preventDefault();
+
+      const interaction = interactionRef.current;
       const cell = getCellAt(touch.clientX, touch.clientY);
+
       if (cell) {
         highlightRef.current = { row: cell.row, col: cell.col };
-        if (dragRef.current.isDragging && dragRef.current.dragValue !== null && !isComplete) {
-          onFillCell(cell.row, cell.col, dragRef.current.dragValue);
-        }
       } else {
         highlightRef.current = { row: -1, col: -1 };
       }
+
+      if (interaction.isDown && !interaction.isDragging) {
+        // Check if we've moved enough to start dragging
+        const dx = touch.clientX - interaction.startX;
+        const dy = touch.clientY - interaction.startY;
+        const dist = Math.sqrt(dx * dx + dy * dy);
+
+        if (dist >= DRAG_THRESHOLD) {
+          // Start drag! First, apply the initial cell
+          interaction.isDragging = true;
+          clearLongPressTimer();
+          const startCell = interaction.startCell;
+          if (startCell && !isComplete) {
+            const current = playerGrid[startCell.row][startCell.col];
+            const fillVal = mode === 'fill' ? (current === 1 ? 0 : 1) : (current === 2 ? 0 : 2);
+            interaction.dragValue = fillVal;
+            onToggleCell(startCell.row, startCell.col);
+          }
+        }
+      }
+
+      if (interaction.isDragging && interaction.dragValue !== null && cell && !isComplete) {
+        onFillCell(cell.row, cell.col, interaction.dragValue);
+      }
+
       render();
     },
-    [getCellAt, onFillCell, render, isComplete]
+    [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode]
   );
 
-  const handlePointerUp = useCallback(() => {
-    if (dragRef.current.isDragging) {
-      dragRef.current = { isDragging: false, dragValue: null };
-      onEndDrag();
-    }
-    highlightRef.current = { row: -1, col: -1 };
-    render();
-  }, [onEndDrag, render]);
+  const handlePointerUp = useCallback(
+    (e) => {
+      const interaction = interactionRef.current;
+      clearLongPressTimer();
+
+      if (interaction.isDown && !interaction.isDragging) {
+        // This was a single tap (no drag detected)
+        const cell = interaction.startCell;
+        if (cell && !isComplete) {
+          onToggleCell(cell.row, cell.col);
+        }
+      }
+
+      if (interaction.isDragging) {
+        onEndDrag();
+      }
+
+      interaction.isDown = false;
+      interaction.isDragging = false;
+      interaction.dragValue = null;
+      interaction.startCell = null;
+      interaction.isLongPress = false;
+
+      highlightRef.current = { row: -1, col: -1 };
+      render();
+    },
+    [onEndDrag, onToggleCell, render, isComplete]
+  );
 
   return (
     <div
