@@ -6,6 +6,7 @@ import { playFill, playMark, playLineComplete, playPuzzleComplete, playUndo, pla
 import { hapticFill, hapticLineComplete, hapticPuzzleComplete, hapticLifeLost, hapticGameOver, hapticAutoX } from '../lib/haptic.js';
 import { isRowComplete, isColComplete, calculateStars } from '../lib/puzzle.js';
 import { loadSettings } from '../lib/settings.js';
+import { BackIcon, HeartIcon, LightbulbIcon, UndoIcon, RedoIcon, PencilIcon, XMarkIcon } from './icons/Icons.jsx';
 
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
@@ -85,7 +86,6 @@ export default function GameScreen({
   useEffect(() => {
     if (!puzzle || !playerGrid) return;
 
-    // Check puzzle complete
     if (isComplete && !wasCompleteRef.current) {
       wasCompleteRef.current = true;
       playPuzzleComplete();
@@ -93,7 +93,6 @@ export default function GameScreen({
       return;
     }
 
-    // Check row/col completions
     const completeRows = new Set();
     const completeCols = new Set();
     for (let i = 0; i < puzzle.size; i++) {
@@ -101,7 +100,6 @@ export default function GameScreen({
       if (isColComplete(puzzle.colClues, playerGrid, i)) completeCols.add(i);
     }
 
-    // Find newly completed
     let newlyCompleted = false;
     for (const r of completeRows) {
       if (!prevCompleteRowsRef.current.has(r)) {
@@ -167,9 +165,7 @@ export default function GameScreen({
       {/* Header */}
       <header className="game-header">
         <button className="back-btn" onClick={onGoHome} aria-label="뒤로">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <BackIcon size={24} />
         </button>
         <div className="level-info">
           <span className="level-number">
@@ -182,7 +178,7 @@ export default function GameScreen({
           <div className="lives-display">
             {Array.from({ length: maxLives }, (_, i) => (
               <span key={i} className={`life-heart ${i < lives ? 'active' : 'lost'}`}>
-                {i < lives ? '❤️' : '🖤'}
+                <HeartIcon size={16} filled={i < lives} color={i < lives ? 'var(--danger)' : 'var(--text-tertiary)'} />
               </span>
             ))}
           </div>
@@ -219,16 +215,22 @@ export default function GameScreen({
       {/* Controls */}
       <footer className="controls">
         <button className="control-btn" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver}>
-          <span className="icon">💡</span>
+          <span className="icon">
+            <LightbulbIcon size={24} color="var(--text)" />
+          </span>
           <span className="label">힌트</span>
           {hints > 0 && <span className="count">{hints}</span>}
         </button>
         <button className="control-btn" onClick={handleUndo} disabled={isGameOver}>
-          <span className="icon">↩️</span>
+          <span className="icon">
+            <UndoIcon size={24} />
+          </span>
           <span className="label">실행취소</span>
         </button>
         <button className="control-btn" onClick={onRedo} disabled={isGameOver}>
-          <span className="icon">↪️</span>
+          <span className="icon">
+            <RedoIcon size={24} />
+          </span>
           <span className="label">다시실행</span>
         </button>
         <button
@@ -238,11 +240,15 @@ export default function GameScreen({
         >
           <div className="mode-toggle-inner">
             <div className={`mode-option ${mode === 'fill' ? 'active' : ''}`}>
-              <span className="mode-icon">✏️</span>
+              <span className="mode-icon">
+                <PencilIcon size={18} color={mode === 'fill' ? 'var(--accent)' : 'var(--text-secondary)'} />
+              </span>
               <span className="mode-label">색칠</span>
             </div>
             <div className={`mode-option ${mode === 'mark' ? 'active' : ''}`}>
-              <span className="mode-icon">✕</span>
+              <span className="mode-icon">
+                <XMarkIcon size={18} color={mode === 'mark' ? 'var(--danger)' : 'var(--text-secondary)'} />
+              </span>
               <span className="mode-label">X표시</span>
             </div>
           </div>

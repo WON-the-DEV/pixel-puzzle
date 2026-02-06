@@ -1,8 +1,12 @@
+import { BrokenHeartIcon } from './icons/Icons.jsx';
+
 export default function GameOverModal({ level, onRestart, onHome }) {
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <div className="modal-content game-over-modal">
-        <div className="modal-emoji">💔</div>
+        <div className="modal-icon">
+          <BrokenHeartIcon size={64} />
+        </div>
         <h2>게임 오버</h2>
         <p className="game-over-desc">
           라이프를 모두 소진했어요

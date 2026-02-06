@@ -1,3 +1,5 @@
+import { CelebrationIcon, StarIcon, LightbulbIcon } from './icons/Icons.jsx';
+
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
   const mins = Math.floor(seconds / 60);
@@ -9,7 +11,9 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <div className="modal-content">
-        <div className="modal-emoji">🎉</div>
+        <div className="modal-icon">
+          <CelebrationIcon size={64} />
+        </div>
         <h2>퍼즐 완료!</h2>
         {puzzleName && <p className="puzzle-complete-name">{puzzleName}</p>}
 
@@ -22,7 +26,7 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
                 className={`star ${i <= stars ? 'earned' : 'empty'}`}
                 style={{ animationDelay: `${0.2 + i * 0.15}s` }}
               >
-                {i <= stars ? '⭐' : '☆'}
+                <StarIcon size={28} filled={i <= stars} color={i <= stars ? 'var(--warning)' : 'var(--text-tertiary)'} />
               </span>
             ))}
           </div>
@@ -40,7 +44,10 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
           </div>
         </div>
 
-        <p className="hint-earned-text">💡 힌트 +1 획득!</p>
+        <p className="hint-earned-text">
+          <LightbulbIcon size={16} color="var(--success)" />
+          힌트 +1 획득!
+        </p>
 
         <div className="modal-buttons">
           <button className="secondary-btn" onClick={onHome}>

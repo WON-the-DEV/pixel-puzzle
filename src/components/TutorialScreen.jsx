@@ -1,26 +1,27 @@
 import { useState, useCallback } from 'react';
+import { WelcomeIllust, NumbersIllust, TapIllust, ToolsIllust } from './icons/Icons.jsx';
 
 const STEPS = [
   {
-    emoji: '🧩',
+    Illust: WelcomeIllust,
     title: '노노그램에 오신 걸 환영해요',
     description: '숫자 단서를 보고 셀을 채워\n숨겨진 그림을 완성하는 퍼즐이에요',
   },
   {
-    emoji: '🔢',
+    Illust: NumbersIllust,
     title: '숫자가 힌트예요',
     description: '행과 열의 숫자는 연속으로\n채워야 할 셀의 개수를 알려줘요',
     example: true,
   },
   {
-    emoji: '👆',
+    Illust: TapIllust,
     title: '탭으로 색칠해요',
     description: '셀을 탭하면 색칠돼요\n드래그로 여러 셀을 한번에 채울 수도 있어요',
   },
   {
-    emoji: '💡',
+    Illust: ToolsIllust,
     title: '도구를 활용해요',
-    description: '❌ X표시로 빈 칸을 표시하고\n💡 힌트로 막힐 때 도움받으세요',
+    description: 'X표시로 빈 칸을 표시하고\n힌트로 막힐 때 도움받으세요',
   },
 ];
 
@@ -50,6 +51,7 @@ export default function TutorialScreen({ onComplete }) {
 
   const current = STEPS[step];
   const isLast = step === STEPS.length - 1;
+  const IllustComponent = current.Illust;
 
   return (
     <div className="tutorial-screen">
@@ -62,14 +64,15 @@ export default function TutorialScreen({ onComplete }) {
           className={`tutorial-card tutorial-slide-${direction}`}
           key={step}
         >
-          <div className="tutorial-emoji">{current.emoji}</div>
+          <div className="tutorial-illust">
+            <IllustComponent size={100} />
+          </div>
           <h2 className="tutorial-title">{current.title}</h2>
           <p className="tutorial-desc">{current.description}</p>
 
           {current.example && (
             <div className="tutorial-example">
               <div className="example-grid">
-                {/* A tiny 5-col visual example */}
                 <div className="example-header">
                   <span className="example-clue-col">1</span>
                   <span className="example-clue-col">3</span>
@@ -119,7 +122,7 @@ export default function TutorialScreen({ onComplete }) {
           <div />
         )}
         <button className="tutorial-btn-primary" onClick={handleNext}>
-          {isLast ? '시작하기 🎮' : '다음'}
+          {isLast ? '시작하기' : '다음'}
         </button>
       </div>
     </div>

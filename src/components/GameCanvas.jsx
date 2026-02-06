@@ -1,28 +1,35 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { isRowComplete, isColComplete } from '../lib/puzzle.js';
 
-const COLORS = {
-  bg: '#ffffff',
-  grid: '#e5e8eb',
-  gridBold: '#8b95a1',
-  cellFilled: '#191f28',
-  clueText: '#191f28',
-  clueComplete: '#b0b8c1',
-  highlight: '#3182f6',
-  highlightBg: 'rgba(49, 130, 246, 0.08)',
-  mistakeBg: 'rgba(239, 68, 68, 0.15)',
-  mistakeBorder: '#ef4444',
-  autoXMark: '#3182f6',
-};
+// Get computed CSS variable value
+function getCSSVar(name) {
+  return getComputedStyle(document.documentElement).getPropertyValue(name).trim();
+}
+
+function getColors() {
+  const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+  return {
+    bg: isDark ? '#1E2A45' : '#ffffff',
+    grid: isDark ? '#2D3A56' : '#E5E7EB',
+    gridBold: isDark ? '#64748B' : '#9CA3AF',
+    cellFilled: isDark ? '#E2E8F0' : '#1B2838',
+    clueText: isDark ? '#E2E8F0' : '#1A1A2E',
+    clueComplete: isDark ? '#475569' : '#D1D5DB',
+    highlight: '#6C5CE7',
+    highlightBg: isDark ? 'rgba(124, 108, 240, 0.12)' : 'rgba(108, 92, 231, 0.08)',
+    completedRowBg: isDark ? 'rgba(16, 185, 129, 0.06)' : 'rgba(16, 185, 129, 0.05)',
+    mistakeBg: 'rgba(239, 68, 68, 0.15)',
+    mistakeBorder: '#ef4444',
+    autoXMark: '#6C5CE7',
+  };
+}
 
 const FONTS = {
   clue: 'bold 14px -apple-system, BlinkMacSystemFont, sans-serif',
   clueSmall: 'bold 11px -apple-system, BlinkMacSystemFont, sans-serif',
 };
 
-// 드래그 시작 최소 거리 (px)
 const DRAG_THRESHOLD = 8;
-// 싱글 탭 최대 시간 (ms)
 const TAP_MAX_TIME = 300;
 
 export default function GameCanvas({
@@ -53,18 +60,15 @@ export default function GameCanvas({
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
 
-  // Zoom/pan state for large puzzles
   const zoomRef = useRef({ scale: 1, offsetX: 0, offsetY: 0, isPinching: false, startDist: 0, startScale: 1 });
   const [zoomLevel, setZoomLevel] = useState(1);
   const lastTapRef = useRef(0);
 
   const needsZoom = puzzle && puzzle.size >= 10;
 
-  // Track auto X cells for animation
   useEffect(() => {
     if (autoXCells.length > 0) {
       autoXAnimRef.current = new Set(autoXCells.map(c => `${c.row}-${c.col}`));
-      // Clear animation markers after animation duration
       const timer = setTimeout(() => {
         autoXAnimRef.current = new Set();
       }, 600);
@@ -72,7 +76,6 @@ export default function GameCanvas({
     }
   }, [autoXCells]);
 
-  // Calculate layout based on puzzle size
   const getLayout = useCallback(() => {
     if (!puzzle) return null;
     const size = puzzle.size;
@@ -94,7 +97,6 @@ export default function GameCanvas({
     return { size, cellSize, clueWidth, clueHeight, padding, width, height, offsetX, offsetY };
   }, [puzzle]);
 
-  // Render everything
   const render = useCallback(() => {
     const canvas = canvasRef.current;
     if (!canvas || !puzzle || !playerGrid) return;
@@ -102,6 +104,7 @@ export default function GameCanvas({
     if (!layout) return;
     layoutRef.current = layout;
 
+    const COLORS = getColors();
     const { size, cellSize, clueWidth, clueHeight, padding, width, height, offsetX, offsetY } = layout;
     const dpr = window.devicePixelRatio || 1;
 
@@ -118,6 +121,20 @@ export default function GameCanvas({
     ctx.fillRect(0, 0, width, height);
 
     const { row: hRow, col: hCol } = highlightRef.current;
+
+    // Completed row/col background tint
+    for (let i = 0; i < size; i++) {
+      if (isRowComplete(puzzle.rowClues, playerGrid, i)) {
+        ctx.fillStyle = COLORS.completedRowBg;
+        ctx.fillRect(0, offsetY + i * cellSize, width, cellSize);
+      }
+    }
+    for (let j = 0; j < size; j++) {
+      if (isColComplete(puzzle.colClues, playerGrid, j)) {
+        ctx.fillStyle = COLORS.completedRowBg;
+        ctx.fillRect(offsetX + j * cellSize, 0, cellSize, height);
+      }
+    }
 
     // Row highlight strip
     if (hRow >= 0) {
@@ -166,13 +183,11 @@ export default function GameCanvas({
       ctx.strokeStyle = isBold ? COLORS.gridBold : COLORS.grid;
       ctx.lineWidth = isBold ? 2 : 1;
 
-      // Horizontal
       ctx.beginPath();
       ctx.moveTo(offsetX, y);
       ctx.lineTo(offsetX + size * cellSize, y);
       ctx.stroke();
 
-      // Vertical
       ctx.beginPath();
       ctx.moveTo(x, offsetY);
       ctx.lineTo(x, offsetY + size * cellSize);
@@ -188,7 +203,6 @@ export default function GameCanvas({
         const x = offsetX + j * cellSize;
         const y = offsetY + i * cellSize;
 
-        // Mistake highlighting
         if (showMistakes && !isComplete && cell !== 0) {
           const expected = puzzle.solution[i][j];
           const isMistake = (cell === 1 && expected === 0) || (cell === 2 && expected === 1);
@@ -202,10 +216,9 @@ export default function GameCanvas({
         }
 
         if (cell === 1) {
-          // Filled
           ctx.fillStyle = COLORS.cellFilled;
           const inset = Math.max(2, cellSize * 0.06);
-          const r = Math.max(2, cellSize * 0.08);
+          const r = Math.max(2, cellSize * 0.1);
           const cx = x + inset;
           const cy = y + inset;
           const cw = cellSize - inset * 2;
@@ -223,7 +236,6 @@ export default function GameCanvas({
           ctx.closePath();
           ctx.fill();
         } else if (cell === 2) {
-          // X mark
           const isAutoX = animatingAutoX.has(`${i}-${j}`);
           ctx.strokeStyle = isAutoX ? COLORS.autoXMark : COLORS.clueComplete;
           ctx.lineWidth = 2;
@@ -241,26 +253,29 @@ export default function GameCanvas({
     }
   }, [puzzle, playerGrid, getLayout, showMistakes, isComplete, autoXCells]);
 
-  // Render on state changes
   useEffect(() => {
     render();
   }, [render]);
 
-  // Resize handler
   useEffect(() => {
     const onResize = () => render();
     window.addEventListener('resize', onResize);
     return () => window.removeEventListener('resize', onResize);
   }, [render]);
 
-  // Get cell from pointer position (accounting for zoom)
+  // Listen for theme changes
+  useEffect(() => {
+    const observer = new MutationObserver(() => render());
+    observer.observe(document.documentElement, { attributes: true, attributeFilter: ['data-theme'] });
+    return () => observer.disconnect();
+  }, [render]);
+
   const getCellAt = useCallback((clientX, clientY) => {
     const canvas = canvasRef.current;
     const layout = layoutRef.current;
     if (!canvas || !layout) return null;
     const rect = canvas.getBoundingClientRect();
 
-    // Account for CSS transform (zoom/pan)
     const zoom = zoomRef.current;
     const wrapper = wrapperRef.current;
     let x, y;
@@ -284,7 +299,6 @@ export default function GameCanvas({
     return null;
   }, [needsZoom]);
 
-  // ── Touch handlers for zoom/pan (wrapper level) ──
   const getTouchDist = (touches) => {
     const dx = touches[0].clientX - touches[1].clientX;
     const dy = touches[0].clientY - touches[1].clientY;
@@ -359,7 +373,6 @@ export default function GameCanvas({
     }
   };
 
-  // ── Pointer handlers with proper single-tap and drag detection ──
   const handlePointerDown = useCallback(
     (e) => {
       if (isComplete) return;
@@ -404,13 +417,11 @@ export default function GameCanvas({
       }
 
       if (interaction.isDown && !interaction.isDragging) {
-        // Check if we've moved enough to start dragging
         const dx = touch.clientX - interaction.startX;
         const dy = touch.clientY - interaction.startY;
         const dist = Math.sqrt(dx * dx + dy * dy);
 
         if (dist >= DRAG_THRESHOLD) {
-          // Start drag! First, apply the initial cell
           interaction.isDragging = true;
           clearLongPressTimer();
           const startCell = interaction.startCell;
@@ -438,7 +449,6 @@ export default function GameCanvas({
       clearLongPressTimer();
 
       if (interaction.isDown && !interaction.isDragging) {
-        // This was a single tap (no drag detected)
         const cell = interaction.startCell;
         if (cell && !isComplete) {
           onToggleCell(cell.row, cell.col);

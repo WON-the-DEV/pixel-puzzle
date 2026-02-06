@@ -7,6 +7,7 @@ import { useGame } from './hooks/useGame.js';
 import { loadAppState, saveAppState } from './lib/storage.js';
 import { initAudio } from './lib/sound.js';
 import { calculateStars } from './lib/puzzle.js';
+import { loadSettings } from './lib/settings.js';
 
 function hasSeenTutorial() {
   try {
@@ -28,6 +29,16 @@ export default function App() {
   const [screen, setScreen] = useState(() => hasSeenTutorial() ? 'home' : 'tutorial');
   const [appState, setAppState] = useState(loadAppState);
   const { state: gameState, startLevel, toggleCell, fillCell, endDrag, toggleMode, undo, redo, useHint, clearAutoX, restartLevel } = useGame();
+
+  // Apply dark mode on initial load
+  useEffect(() => {
+    const settings = loadSettings();
+    document.documentElement.setAttribute('data-theme', settings.darkMode ? 'dark' : 'light');
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute('content', settings.darkMode ? '#1A1A2E' : '#ffffff');
+    }
+  }, []);
 
   // Init audio on first user interaction
   useEffect(() => {

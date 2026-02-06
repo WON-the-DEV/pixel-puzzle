@@ -1,5 +1,6 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useEffect } from 'react';
 import { loadSettings, saveSettings } from '../lib/settings.js';
+import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashIcon, AlertIcon } from './icons/Icons.jsx';
 
 export default function SettingsScreen({ onGoHome, onResetTutorial }) {
   const [settings, setSettings] = useState(loadSettings);
@@ -13,6 +14,16 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
     });
   }, []);
 
+  // Apply dark mode
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', settings.darkMode ? 'dark' : 'light');
+    // Update theme-color meta tag
+    const meta = document.querySelector('meta[name="theme-color"]');
+    if (meta) {
+      meta.setAttribute('content', settings.darkMode ? '#1A1A2E' : '#ffffff');
+    }
+  }, [settings.darkMode]);
+
   const handleResetProgress = useCallback(() => {
     try {
       localStorage.removeItem('nonogram_state');
@@ -22,7 +33,6 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
     }
     setShowResetConfirm(false);
     onGoHome();
-    // force full reload to reset app state
     window.location.reload();
   }, [onGoHome]);
 
@@ -39,9 +49,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
     <div className="settings-screen">
       <header className="settings-header">
         <button className="back-btn" onClick={onGoHome} aria-label="뒤로">
-          <svg width="24" height="24" viewBox="0 0 24 24" fill="none">
-            <path d="M15 18l-6-6 6-6" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"/>
-          </svg>
+          <BackIcon size={24} />
         </button>
         <h1 className="settings-title">설정</h1>
         <div style={{ width: 40 }} />
@@ -51,43 +59,50 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
         {/* 게임 설정 */}
         <div className="settings-section">
           <div className="settings-section-title">게임</div>
-
-          <div className="settings-item" onClick={() => toggle('sound')}>
-            <div className="settings-item-left">
-              <span className="settings-item-icon">🔊</span>
-              <div className="settings-item-text">
-                <span className="settings-item-label">사운드 효과</span>
-                <span className="settings-item-desc">셀 채우기, 완료 효과음</span>
+          <div className="settings-card">
+            <div className="settings-item" onClick={() => toggle('sound')}>
+              <div className="settings-item-left">
+                <span className="settings-item-icon">
+                  <SoundIcon size={20} color="var(--accent)" />
+                </span>
+                <div className="settings-item-text">
+                  <span className="settings-item-label">사운드 효과</span>
+                  <span className="settings-item-desc">셀 채우기, 완료 효과음</span>
+                </div>
+              </div>
+              <div className={`settings-toggle ${settings.sound ? 'on' : ''}`}>
+                <div className="settings-toggle-knob" />
               </div>
             </div>
-            <div className={`settings-toggle ${settings.sound ? 'on' : ''}`}>
-              <div className="settings-toggle-knob" />
-            </div>
-          </div>
 
-          <div className="settings-item" onClick={() => toggle('haptic')}>
-            <div className="settings-item-left">
-              <span className="settings-item-icon">📳</span>
-              <div className="settings-item-text">
-                <span className="settings-item-label">햅틱 피드백</span>
-                <span className="settings-item-desc">터치 시 진동 (지원 기기)</span>
+            <div className="settings-item" onClick={() => toggle('haptic')}>
+              <div className="settings-item-left">
+                <span className="settings-item-icon">
+                  <VibrationIcon size={20} color="var(--accent)" />
+                </span>
+                <div className="settings-item-text">
+                  <span className="settings-item-label">햅틱 피드백</span>
+                  <span className="settings-item-desc">터치 시 진동 (지원 기기)</span>
+                </div>
+              </div>
+              <div className={`settings-toggle ${settings.haptic ? 'on' : ''}`}>
+                <div className="settings-toggle-knob" />
               </div>
             </div>
-            <div className={`settings-toggle ${settings.haptic ? 'on' : ''}`}>
-              <div className="settings-toggle-knob" />
-            </div>
-          </div>
 
-          <div className="settings-item" onClick={() => toggle('showMistakes')}>
-            <div className="settings-item-left">
-              <span className="settings-item-icon">🔴</span>
-              <div className="settings-item-text">
-                <span className="settings-item-label">실수 표시</span>
-                <span className="settings-item-desc">틀린 셀을 빨간색으로 표시</span>
+            <div className="settings-item" onClick={() => toggle('showMistakes')}>
+              <div className="settings-item-left">
+                <span className="settings-item-icon">
+                  <EyeIcon size={20} color="var(--accent)" />
+                </span>
+                <div className="settings-item-text">
+                  <span className="settings-item-label">실수 표시</span>
+                  <span className="settings-item-desc">틀린 셀을 빨간색으로 표시</span>
+                </div>
               </div>
-            </div>
-            <div className={`settings-toggle ${settings.showMistakes ? 'on' : ''}`}>
-              <div className="settings-toggle-knob" />
+              <div className={`settings-toggle ${settings.showMistakes ? 'on' : ''}`}>
+                <div className="settings-toggle-knob" />
+              </div>
             </div>
           </div>
         </div>
@@ -95,17 +110,20 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
         {/* 화면 설정 */}
         <div className="settings-section">
           <div className="settings-section-title">화면</div>
-
-          <div className="settings-item disabled" onClick={() => toggle('darkMode')}>
-            <div className="settings-item-left">
-              <span className="settings-item-icon">🌙</span>
-              <div className="settings-item-text">
-                <span className="settings-item-label">다크 모드</span>
-                <span className="settings-item-desc">준비 중</span>
+          <div className="settings-card">
+            <div className="settings-item" onClick={() => toggle('darkMode')}>
+              <div className="settings-item-left">
+                <span className="settings-item-icon">
+                  <MoonIcon size={20} color="var(--accent)" />
+                </span>
+                <div className="settings-item-text">
+                  <span className="settings-item-label">다크 모드</span>
+                  <span className="settings-item-desc">어두운 테마로 전환</span>
+                </div>
               </div>
-            </div>
-            <div className={`settings-toggle ${settings.darkMode ? 'on' : ''}`}>
-              <div className="settings-toggle-knob" />
+              <div className={`settings-toggle ${settings.darkMode ? 'on' : ''}`}>
+                <div className="settings-toggle-knob" />
+              </div>
             </div>
           </div>
         </div>
@@ -115,7 +133,9 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
           <div className="settings-section-title">기타</div>
 
           <button className="settings-action-btn" onClick={handleResetTutorial}>
-            <span className="settings-item-icon">📖</span>
+            <span className="settings-item-icon">
+              <BookIcon size={20} color="var(--text-secondary)" />
+            </span>
             <span>튜토리얼 다시 보기</span>
           </button>
 
@@ -123,7 +143,9 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
             className="settings-action-btn danger"
             onClick={() => setShowResetConfirm(true)}
           >
-            <span className="settings-item-icon">🗑️</span>
+            <span className="settings-item-icon">
+              <TrashIcon size={20} color="var(--danger)" />
+            </span>
             <span>진행 초기화</span>
           </button>
         </div>
@@ -133,7 +155,9 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
       {showResetConfirm && (
         <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowResetConfirm(false)}>
           <div className="modal-content">
-            <div className="modal-emoji">⚠️</div>
+            <div className="modal-icon">
+              <AlertIcon size={56} />
+            </div>
             <h2>진행 초기화</h2>
             <p style={{ color: 'var(--text-secondary)', margin: '12px 0 24px', fontSize: 14, lineHeight: 1.5 }}>
               모든 레벨 진행 상황과 기록이<br />삭제됩니다. 되돌릴 수 없어요.
@@ -144,7 +168,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial }) {
               </button>
               <button
                 className="primary-btn"
-                style={{ background: 'var(--danger)' }}
+                style={{ background: 'var(--danger)', boxShadow: '0 4px 16px rgba(239, 68, 68, 0.25)' }}
                 onClick={handleResetProgress}
               >
                 초기화
