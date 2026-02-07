@@ -57,18 +57,6 @@ function gameReducer(state, action) {
       const puzzle = action.puzzle;
       const playerGrid = createEmptyGrid(puzzle.size);
 
-      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
-      for (let i = 0; i < puzzle.size; i++) {
-        if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
-          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
-        }
-      }
-      for (let j = 0; j < puzzle.size; j++) {
-        if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
-          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
-        }
-      }
-
       // 저장된 일일 게임 복원 시도
       const dailySaveKey = 'nonogram_daily_game_' + (action.dateStr || '');
       let savedDaily = null;
@@ -97,6 +85,48 @@ function gameReducer(state, action) {
           filledCorrect,
           mistakeFlashCells: [],
           usedRevive: savedDaily.usedRevive || false,
+          pendingZeroLineX: false,
+        };
+      }
+
+      // 단서가 [0]인 행/열 체크 — 지연 표시
+      const zeroLineCellsDaily = [];
+      for (let i = 0; i < puzzle.size; i++) {
+        if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
+          for (let j = 0; j < puzzle.size; j++) zeroLineCellsDaily.push({ row: i, col: j });
+        }
+      }
+      for (let j = 0; j < puzzle.size; j++) {
+        if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
+          for (let i = 0; i < puzzle.size; i++) {
+            if (!zeroLineCellsDaily.some(c => c.row === i && c.col === j)) {
+              zeroLineCellsDaily.push({ row: i, col: j });
+            }
+          }
+        }
+      }
+
+      if (zeroLineCellsDaily.length > 0) {
+        return {
+          ...state,
+          level: 0,
+          puzzle,
+          playerGrid,
+          mode: 'fill',
+          history: [cloneGrid(playerGrid)],
+          historyIndex: 0,
+          startTime: Date.now(),
+          elapsedTime: 0,
+          isComplete: false,
+          lives: 3,
+          maxLives: 3,
+          isGameOver: false,
+          autoXCells: [],
+          filledCorrect: 0,
+          mistakeFlashCells: [],
+          usedRevive: false,
+          pendingZeroLineX: true,
+          zeroLineCells: zeroLineCellsDaily,
         };
       }
 
@@ -118,6 +148,7 @@ function gameReducer(state, action) {
         filledCorrect: 0,
         mistakeFlashCells: [],
         usedRevive: false,
+        pendingZeroLineX: false,
       };
     }
 
@@ -147,21 +178,52 @@ function gameReducer(state, action) {
           filledCorrect,
           mistakeFlashCells: [],
           usedRevive: saved.usedRevive || false,
+          pendingZeroLineX: false,
         };
       }
 
       const playerGrid = createEmptyGrid(puzzle.size);
 
-      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
+      // 단서가 [0]인 행/열 체크 — 지연 표시를 위해 아직 채우지 않음
+      const zeroLineCells = [];
       for (let i = 0; i < puzzle.size; i++) {
         if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
-          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
+          for (let j = 0; j < puzzle.size; j++) zeroLineCells.push({ row: i, col: j });
         }
       }
       for (let j = 0; j < puzzle.size; j++) {
         if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
-          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
+          for (let i = 0; i < puzzle.size; i++) {
+            if (!zeroLineCells.some(c => c.row === i && c.col === j)) {
+              zeroLineCells.push({ row: i, col: j });
+            }
+          }
         }
+      }
+
+      if (zeroLineCells.length > 0) {
+        // 빈 그리드로 시작, 잠시 후 APPLY_ZERO_LINE_X로 채움
+        return {
+          ...state,
+          level,
+          puzzle,
+          playerGrid,
+          mode: 'fill',
+          history: [cloneGrid(playerGrid)],
+          historyIndex: 0,
+          startTime: Date.now(),
+          elapsedTime: 0,
+          isComplete: false,
+          lives: 3,
+          maxLives: 3,
+          isGameOver: false,
+          autoXCells: [],
+          filledCorrect: 0,
+          mistakeFlashCells: [],
+          usedRevive: false,
+          pendingZeroLineX: true,
+          zeroLineCells,
+        };
       }
 
       return {
@@ -182,6 +244,7 @@ function gameReducer(state, action) {
         filledCorrect: 0,
         mistakeFlashCells: [],
         usedRevive: false,
+        pendingZeroLineX: false,
       };
     }
 
@@ -389,22 +452,67 @@ function gameReducer(state, action) {
       return { ...state, lives: 1, isGameOver: false, usedRevive: true, lostLife: false };
     }
 
+    case 'APPLY_ZERO_LINE_X': {
+      if (!state.pendingZeroLineX || !state.zeroLineCells || !state.puzzle) return state;
+      const newGrid = cloneGrid(state.playerGrid);
+      const cells = state.zeroLineCells;
+      for (const { row, col } of cells) {
+        newGrid[row][col] = 2;
+      }
+      return {
+        ...state,
+        playerGrid: newGrid,
+        history: [cloneGrid(newGrid)],
+        historyIndex: 0,
+        autoXCells: cells,
+        pendingZeroLineX: false,
+        zeroLineCells: [],
+      };
+    }
+
     case 'RESTART_LEVEL': {
       const puzzle = state.puzzle;
       if (!puzzle) return state;
       clearGameSave();
       const playerGrid = createEmptyGrid(puzzle.size);
 
-      // 단서가 [0]인 행/열은 시작부터 X(2)로 채우기
+      // 단서가 [0]인 행/열 체크 — 지연 표시
+      const zeroLineCellsRestart = [];
       for (let i = 0; i < puzzle.size; i++) {
         if (puzzle.rowClues[i].length === 1 && puzzle.rowClues[i][0] === 0) {
-          for (let j = 0; j < puzzle.size; j++) playerGrid[i][j] = 2;
+          for (let j = 0; j < puzzle.size; j++) zeroLineCellsRestart.push({ row: i, col: j });
         }
       }
       for (let j = 0; j < puzzle.size; j++) {
         if (puzzle.colClues[j].length === 1 && puzzle.colClues[j][0] === 0) {
-          for (let i = 0; i < puzzle.size; i++) playerGrid[i][j] = 2;
+          for (let i = 0; i < puzzle.size; i++) {
+            if (!zeroLineCellsRestart.some(c => c.row === i && c.col === j)) {
+              zeroLineCellsRestart.push({ row: i, col: j });
+            }
+          }
         }
+      }
+
+      if (zeroLineCellsRestart.length > 0) {
+        return {
+          ...state,
+          playerGrid,
+          mode: 'fill',
+          history: [cloneGrid(playerGrid)],
+          historyIndex: 0,
+          startTime: Date.now(),
+          elapsedTime: 0,
+          isComplete: false,
+          lives: 3,
+          maxLives: 3,
+          isGameOver: false,
+          autoXCells: [],
+          filledCorrect: 0,
+          mistakeFlashCells: [],
+          usedRevive: false,
+          pendingZeroLineX: true,
+          zeroLineCells: zeroLineCellsRestart,
+        };
       }
 
       return {
@@ -423,6 +531,7 @@ function gameReducer(state, action) {
         filledCorrect: 0,
         mistakeFlashCells: [],
         usedRevive: false,
+        pendingZeroLineX: false,
       };
     }
 
@@ -494,6 +603,10 @@ export function useGame() {
     dispatch({ type: 'REVIVE' });
   }, []);
 
+  const applyZeroLineX = useCallback(() => {
+    dispatch({ type: 'APPLY_ZERO_LINE_X' });
+  }, []);
+
   return {
     state,
     startLevel,
@@ -506,5 +619,6 @@ export function useGame() {
     clearAutoX,
     restartLevel,
     revive,
+    applyZeroLineX,
   };
 }

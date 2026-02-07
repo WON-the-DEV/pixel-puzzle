@@ -1,4 +1,4 @@
-import { BrokenHeartIcon, VideoIcon } from './icons/Icons.jsx';
+import { BrokenHeartIcon } from './icons/Icons.jsx';
 
 export default function GameOverModal({ level, onRestart, onHome, onRevive, usedRevive }) {
   const handleRevive = () => {

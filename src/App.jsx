@@ -37,7 +37,7 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => loadSettings().darkMode);
   const [levelTransition, setLevelTransition] = useState(null); // 'slide-left-in' | null
   const [dailyDate, setDailyDate] = useState(null); // YYYY-MM-DD when playing daily
-  const { state: gameState, startLevel, startDaily, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive } = useGame();
+  const { state: gameState, startLevel, startDaily, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive, applyZeroLineX } = useGame();
 
   // Apply dark mode on initial load
   useEffect(() => {
@@ -343,6 +343,7 @@ export default function App() {
           onNextLevel={handleNextLevel}
           onRestartLevel={handleRestartLevel}
           onRevive={revive}
+          onApplyZeroLineX={applyZeroLineX}
           hints={appState.hints}
           darkMode={darkMode}
           isDaily={!!dailyDate}

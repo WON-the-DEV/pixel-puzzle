@@ -98,8 +98,8 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll 
                   <TouchIcon size={20} color="var(--accent)" />
                 </span>
                 <div className="settings-item-text">
-                  <span className="settings-item-label">오프셋 커서</span>
-                  <span className="settings-item-desc">손가락 위쪽에 선택점 표시</span>
+                  <span className="settings-item-label">☝️ 오프셋 커서</span>
+                  <span className="settings-item-desc">터치 시 손가락 위쪽 칸을 선택하여 가려짐 방지</span>
                 </div>
               </div>
               <div className={`settings-toggle ${settings.touchOffset ? 'on' : ''}`}>

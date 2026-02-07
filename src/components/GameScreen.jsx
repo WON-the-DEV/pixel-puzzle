@@ -26,6 +26,7 @@ export default function GameScreen({
   onNextLevel,
   onRestartLevel,
   onRevive,
+  onApplyZeroLineX,
   hints,
   darkMode = false,
   isDaily = false,
@@ -49,6 +50,16 @@ export default function GameScreen({
     setCursorRow(0);
     setCursorCol(0);
   }, [level]);
+
+  // Delayed zero-line X application (0.3s after game start)
+  useEffect(() => {
+    if (gameState.pendingZeroLineX && onApplyZeroLineX) {
+      const timer = setTimeout(() => {
+        onApplyZeroLineX();
+      }, 300);
+      return () => clearTimeout(timer);
+    }
+  }, [gameState.pendingZeroLineX, onApplyZeroLineX]);
 
   // Timer
   useEffect(() => {

@@ -1,7 +1,46 @@
-import { useState, useCallback } from 'react';
+import { useState, useCallback, useMemo } from 'react';
 import { CelebrationIcon, StarIcon, LightbulbIcon } from './icons/Icons.jsx';
 import { sharePuzzleResult } from '../lib/shareImage.js';
 import { calculateStreak } from '../lib/dailyChallenge.js';
+
+const CONFETTI_COLORS = ['#6C5CE7', '#FF6B6B', '#FECA57', '#48DBFB', '#FF9FF3', '#54A0FF', '#5F27CD', '#01a3a4', '#f368e0', '#ff9f43'];
+const CONFETTI_COUNT = 28;
+
+function ConfettiEffect() {
+  const particles = useMemo(() => {
+    return Array.from({ length: CONFETTI_COUNT }, (_, i) => {
+      const left = Math.random() * 100;
+      const delay = Math.random() * 1.5;
+      const duration = 2 + Math.random() * 1.5;
+      const color = CONFETTI_COLORS[i % CONFETTI_COLORS.length];
+      const size = 6 + Math.random() * 6;
+      const rotate = Math.random() * 720;
+      const isCircle = Math.random() > 0.5;
+      return { left, delay, duration, color, size, rotate, isCircle };
+    });
+  }, []);
+
+  return (
+    <div className="confetti-container" aria-hidden="true">
+      {particles.map((p, i) => (
+        <div
+          key={i}
+          className="confetti-particle"
+          style={{
+            left: `${p.left}%`,
+            animationDelay: `${p.delay}s`,
+            animationDuration: `${p.duration}s`,
+            backgroundColor: p.color,
+            width: p.size,
+            height: p.isCircle ? p.size : p.size * 0.6,
+            borderRadius: p.isCircle ? '50%' : '2px',
+            '--confetti-rotate': `${p.rotate}deg`,
+          }}
+        />
+      ))}
+    </div>
+  );
+}
 
 function formatTime(ms) {
   const seconds = Math.floor(ms / 1000);
@@ -98,7 +137,8 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
 
   return (
     <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
-      <div className="modal-content">
+      <ConfettiEffect />
+      <div className="modal-content complete-modal">
         <div className="modal-icon">
           <CelebrationIcon size={64} />
         </div>

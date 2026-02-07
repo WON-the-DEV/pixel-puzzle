@@ -207,17 +207,22 @@ export default function GameCanvas({
     const fontFamily = '-apple-system, BlinkMacSystemFont, sans-serif';
     const clueFont = `bold ${clueFontSize}px ${fontFamily}`;
 
+    // Font for highlighted clues (slightly larger in controller mode)
+    const highlightClueFontSize = controllerMode ? Math.min(clueFontSize + 1, 14) : clueFontSize;
+    const highlightClueFont = `900 ${highlightClueFontSize}px ${fontFamily}`;
+
     // Row clues (left side)
     puzzle.rowClues.forEach((clues, i) => {
       const complete = isRowComplete(puzzle.rowClues, playerGrid, i);
+      const isHighlighted = i === hRow && !complete;
       const y = offsetY + i * cellSize + cellSize / 2;
-      ctx.font = clueFont;
+      ctx.font = isHighlighted ? highlightClueFont : clueFont;
       if (complete) {
         ctx.globalAlpha = 0.4;
         ctx.fillStyle = '#aaaaaa';
       } else {
         ctx.globalAlpha = 1.0;
-        ctx.fillStyle = i === hRow ? COLORS.highlight : COLORS.clueText;
+        ctx.fillStyle = isHighlighted ? COLORS.highlight : COLORS.clueText;
       }
       // For 15x15, use narrower spacing between numbers
       const separator = size >= 15 ? '\u2009' : ' '; // thin space for 15x15
@@ -229,14 +234,15 @@ export default function GameCanvas({
     const colClueLineHeight = size >= 15 ? Math.min(12, cellSize * 0.55) : Math.min(15, cellSize * 0.65);
     puzzle.colClues.forEach((clues, j) => {
       const complete = isColComplete(puzzle.colClues, playerGrid, j);
+      const isHighlighted = j === hCol && !complete;
       const x = offsetX + j * cellSize + cellSize / 2;
-      ctx.font = clueFont;
+      ctx.font = isHighlighted ? highlightClueFont : clueFont;
       if (complete) {
         ctx.globalAlpha = 0.4;
         ctx.fillStyle = '#aaaaaa';
       } else {
         ctx.globalAlpha = 1.0;
-        ctx.fillStyle = j === hCol ? COLORS.highlight : COLORS.clueText;
+        ctx.fillStyle = isHighlighted ? COLORS.highlight : COLORS.clueText;
       }
       clues.forEach((clue, k) => {
         const y = padding + clueHeight - (clues.length - k) * colClueLineHeight + colClueLineHeight / 2;
