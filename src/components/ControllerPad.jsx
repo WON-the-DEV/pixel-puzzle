@@ -38,8 +38,16 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
   const repeatRef = useRef(null);
   const holdActionRef = useRef(null); // 'fill' | 'mark' | null
 
+  // Keep latest callbacks in refs to avoid stale closures in intervals/timeouts
+  const onMoveRef = useRef(onMove);
+  const onFillRef = useRef(onFill);
+  const onMarkRef = useRef(onMark);
+  onMoveRef.current = onMove;
+  onFillRef.current = onFill;
+  onMarkRef.current = onMark;
+
   const handleDirStart = useCallback((dir) => {
-    const action = () => onMove(dir, holdActionRef.current);
+    const action = () => onMoveRef.current(dir, holdActionRef.current);
 
     action();
 
@@ -54,7 +62,7 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
         if (intervalId) clearInterval(intervalId);
       }
     };
-  }, [onMove]);
+  }, []);
 
   const handleDirEnd = useCallback(() => {
     if (repeatRef.current && repeatRef.current.stop) {
@@ -76,8 +84,8 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
   const handleFillStart = useCallback((e) => {
     if (e) e.preventDefault();
     holdActionRef.current = 'fill';
-    onFill();
-  }, [onFill]);
+    onFillRef.current();
+  }, []);
 
   const handleFillEnd = useCallback((e) => {
     if (e) e.preventDefault();
@@ -87,8 +95,8 @@ export default function ControllerPad({ onMove, onFill, onMark }) {
   const handleMarkStart = useCallback((e) => {
     if (e) e.preventDefault();
     holdActionRef.current = 'mark';
-    onMark();
-  }, [onMark]);
+    onMarkRef.current();
+  }, []);
 
   const handleMarkEnd = useCallback((e) => {
     if (e) e.preventDefault();
