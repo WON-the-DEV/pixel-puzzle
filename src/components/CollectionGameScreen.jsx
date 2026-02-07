@@ -206,8 +206,16 @@ function gameReducer(state, action) {
       // 자동 X 채우기 (드래그 중에도 즉시 반영)
       const { grid: autoGridFill, autoFilledCells: autoFilledFill } = autoFillCompleted(state.puzzle.solution, newGrid);
       const filledCorrectFill = getFilledCorrectCount(state.puzzle.solution, autoGridFill);
+      const isCompleteFill = checkMonoSolution(state.puzzle.solution, autoGridFill);
 
-      return { ...state, playerGrid: autoGridFill, autoXCells: autoFilledFill, filledCorrect: filledCorrectFill };
+      return {
+        ...state,
+        playerGrid: autoGridFill,
+        autoXCells: autoFilledFill,
+        filledCorrect: filledCorrectFill,
+        isComplete: isCompleteFill,
+        elapsedTime: isCompleteFill ? Date.now() - state.startTime : state.elapsedTime,
+      };
     }
     case 'END_DRAG': {
       if (state.isGameOver) return state;
@@ -748,7 +756,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const handleRestart = useCallback(() => { wasCompleteRef.current = false; dispatch({ type: 'RESTART' }); }, []);
   const handleRevive = useCallback(() => { dispatch({ type: 'REVIVE' }); }, []);
 
-  // Controller mode handlers — Bug 5 fix: ensure mode is correct before toggling
+  // Controller mode handlers — use FILL_CELL directly to avoid mode toggle race condition
   const handleControllerFill = useCallback(() => {
     if (state.isComplete || state.isGameOver || !state.puzzle) return;
     const current = state.playerGrid[cursorRow]?.[cursorCol];
@@ -758,8 +766,15 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
     hapticFill();
     
     if (current === 2) return; // Already X-marked, skip
-    if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
-    dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
+    if (current === 1) {
+      // Already filled — unfill via toggle
+      if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
+      dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
+    } else {
+      // Empty cell — fill directly
+      if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
+      dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
+    }
   }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode, state.playerGrid]);
 
   const handleControllerMark = useCallback(() => {
@@ -776,6 +791,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode, state.playerGrid]);
 
   // Bug 4: handleControllerMove accepts holdAction for continuous fill/mark
+  // Fixed: Use FILL_CELL directly to avoid mode toggle race condition (same fix as GameScreen)
   const handleControllerMove = useCallback((direction, holdAction) => {
     if (!state.puzzle) return;
     
@@ -798,15 +814,13 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
       
       if (holdAction === 'fill' && current === 0) {
         playFill();
-        if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
-        setTimeout(() => dispatch({ type: 'TOGGLE_CELL', row: newRow, col: newCol }), 0);
+        dispatch({ type: 'FILL_CELL', row: newRow, col: newCol, value: 1 });
       } else if (holdAction === 'mark' && current === 0) {
         playMark();
-        if (state.mode !== 'mark') dispatch({ type: 'TOGGLE_MODE' });
-        setTimeout(() => dispatch({ type: 'TOGGLE_CELL', row: newRow, col: newCol }), 0);
+        dispatch({ type: 'FILL_CELL', row: newRow, col: newCol, value: 2 });
       }
     }
-  }, [state.puzzle, cursorRow, cursorCol, state.isComplete, state.isGameOver, state.playerGrid, state.mode]);
+  }, [state.puzzle, cursorRow, cursorCol, state.isComplete, state.isGameOver, state.playerGrid]);
 
   if (!state.puzzle) return null;
 

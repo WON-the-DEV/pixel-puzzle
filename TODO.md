@@ -150,14 +150,59 @@
 - [x] **PWA 아이콘 생성** — 192x192, 512x512 (보라색 배경 + 하트 픽셀아트)
 - [x] **오프라인 플레이** — 에셋 프리캐시
 
+## ✅ 통합 테스트 + 버그 수정 (v3.6 사이클 20 - 2026-02-07)
+
+### 전체 플로우 코드 트레이싱
+- [x] 앱 시작 → splash → 튜토리얼 → 홈 — 정상
+- [x] 레벨 선택 → 게임 → 채우기/X/드래그/실수/라이프 — 정상
+- [x] 완료 모달 → 별/시간 → 다음 레벨 — 정상
+- [x] 게임오버 → 부활(1회) → 계속 / 다시 시작 / 홈 — 정상
+- [x] 컨트롤러 모드 → hold fill+move → 자동 X — 정상
+- [x] 힌트 사용 → 글로벌 힌트 차감 + 셀 공개 — 정상
+- [x] 설정 → 다크 모드 전환 / 소리·햅틱 토글 — 정상
+- [x] 컬렉션 → 타일 선택 → 게임 → 완료 → 빅픽쳐 업데이트 — 정상
+- [x] 일일 챌린지 → 게임 → 완료 → 스트릭 — 정상
+- [x] 통계/업적 확인 — 정상
+
+### 레벨 해금 로직 검증
+- [x] 레벨 1 기본 해금 (section first) — ✅
+- [x] 각 섹션 첫 레벨 해금 (1, 31, 71, 116) — ✅ `isSectionFirstLevel()` 정확
+- [x] 레벨 N 완료 → N+1 해금 — ✅ `isLevelUnlocked()` = `completedLevels.includes(level-1)`
+- [x] 레벨 30 완료 → 31 해금 — ✅ 31은 section first로 이미 해금
+- [x] 레벨 70 완료 → 71 해금 — ✅ 71도 section first
+
+### 버그 수정
+- [x] **컬렉션 완성 판정 오류** — `checkCollectionComplete()` (achievements.js)와 `countCompletedCollections()` (StatsScreen)가 `tileRows*tileCols`를 사용했으나, 빈 타일(내용 없음)은 플레이 불가. content tiles만 카운트하도록 수정.
+- [x] **컬렉션 설명 타일 수 불일치** — heart(9→7), cat(16→15), tree(9→7), turtle(12→11) 수정
+- [x] **CollectionGameScreen FILL_CELL 완료 미감지** — 드래그/컨트롤러 hold+move 시 `isComplete` 체크 누락. `checkMonoSolution()` + `elapsedTime` 설정 추가.
+- [x] **CollectionGameScreen 컨트롤러 hold+move 레이스 컨디션** — `TOGGLE_MODE + setTimeout(TOGGLE_CELL)` → `FILL_CELL` 직접 호출로 변경 (GameScreen과 동일)
+
+### 다크 모드 검증
+- [x] GameCanvas: `darkMode` prop + MutationObserver — 리드로우 트리거 확인 ✅
+- [x] CollectionGameScreen MonoCanvas: 동일 — ✅
+- [x] CollectionView InteractiveBigPicture: 동일 — ✅
+- [x] 모달 배경/텍스트: CSS 변수(`--card-bg`, `--text`) 사용 — ✅
+- [x] 토스트: CSS 변수 사용 — ✅
+- [x] 스플래시: 인라인 스타일 (테마 무관) — ✅
+
+### 일일 챌린지 날짜 변경
+- [x] 자동 저장 날짜 키 분리 (`nonogram_daily_game_YYYY-MM-DD`) — ✅
+- [x] 컴포넌트 재마운트 시 날짜 업데이트 — ✅ (useMemo 세션 내 캐시)
+- [x] 스트릭 계산 정확 (오늘 미완료 → skip → 어제부터 카운트) — ✅
+- [x] 90일 이전 데이터 자동 정리 — ✅
+
 ## 📋 향후 TODO
 
-### 기능
+### 출시 준비
 - [ ] 실제 광고 SDK 연동 (AdMob 등)
 - [ ] 실제 인앱 구매 연동
+- [ ] 앱인토스 Granite SDK 연동
+- [ ] 앱인토스 제출
+
+### 기능 확장
 - [x] 게임 저장/복원 (중간 이탈 시) ← 사이클 7 자동 저장
 - [x] 일일 챌린지 퍼즐 ← 사이클 10
-- [ ] 더 많은 컬렉션 (크리스마스, 바다, 음식 등)
+- [ ] 더 많은 컬렉션 (크리스마스, 바다 등)
 - [ ] 더 큰 컬렉션 (5×5 타일 그리드 = 25개 퍼즐)
 - [ ] 소셜 공유 (완료 결과)
 - [ ] 리더보드

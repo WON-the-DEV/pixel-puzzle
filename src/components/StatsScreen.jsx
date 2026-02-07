@@ -69,6 +69,25 @@ function loadNonogramStats() {
   return {};
 }
 
+function getContentTileCount(collection) {
+  let count = 0;
+  for (let tr = 0; tr < collection.tileRows; tr++) {
+    for (let tc = 0; tc < collection.tileCols; tc++) {
+      const startR = tr * collection.tileSize;
+      const startC = tc * collection.tileSize;
+      let hasFilled = false;
+      for (let r = startR; r < startR + collection.tileSize && r < collection.bigPicture.length; r++) {
+        for (let c = startC; c < startC + collection.tileSize && c < collection.bigPicture[0].length; c++) {
+          if (collection.bigPicture[r][c] > 0) { hasFilled = true; break; }
+        }
+        if (hasFilled) break;
+      }
+      if (hasFilled) count++;
+    }
+  }
+  return count;
+}
+
 function countCompletedCollections(collectionProgress) {
   if (!collectionProgress || !collectionProgress.completedTiles) return 0;
   const counts = {};
@@ -78,8 +97,8 @@ function countCompletedCollections(collectionProgress) {
   }
   let completed = 0;
   for (const col of COLLECTION_DATA) {
-    const needed = col.tileRows * col.tileCols;
-    if ((counts[col.id] || 0) >= needed) completed++;
+    const needed = getContentTileCount(col);
+    if (needed > 0 && (counts[col.id] || 0) >= needed) completed++;
   }
   return completed;
 }

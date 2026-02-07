@@ -2,6 +2,8 @@
  * 성취(업적) 시스템
  */
 
+import { COLLECTION_DATA } from './collections.js';
+
 const STORAGE_KEY = 'nonogram_achievements';
 
 const ACHIEVEMENTS = [
@@ -149,18 +151,28 @@ function checkMarathon(completedLevels) {
 }
 
 // ─── 컬렉션 완성 체크 ───
+// Note: 빈 타일(내용 없음)은 게임 불가 → content tiles만 카운트
+function getContentTileCount(collection) {
+  let count = 0;
+  for (let tr = 0; tr < collection.tileRows; tr++) {
+    for (let tc = 0; tc < collection.tileCols; tc++) {
+      const startR = tr * collection.tileSize;
+      const startC = tc * collection.tileSize;
+      let hasFilled = false;
+      for (let r = startR; r < startR + collection.tileSize && r < collection.bigPicture.length; r++) {
+        for (let c = startC; c < startC + collection.tileSize && c < collection.bigPicture[0].length; c++) {
+          if (collection.bigPicture[r][c] > 0) { hasFilled = true; break; }
+        }
+        if (hasFilled) break;
+      }
+      if (hasFilled) count++;
+    }
+  }
+  return count;
+}
+
 function checkCollectionComplete(collectionProgress) {
   if (!collectionProgress || !collectionProgress.completedTiles) return false;
-  // 각 컬렉션 ID별 필요 타일 수 (collections.js의 COLLECTION_DATA와 동기화)
-  const collectionSizes = {
-    heart: 9,    // 3x3
-    cat: 16,     // 4x4
-    flower: 9,   // 3x3
-    rocket: 9,   // 3x3
-    tree: 9,     // 3x3
-    turtle: 12,  // 3x4
-    food: 12,    // 4x3
-  };
 
   const counts = {};
   for (const key of collectionProgress.completedTiles) {
@@ -168,8 +180,9 @@ function checkCollectionComplete(collectionProgress) {
     counts[colId] = (counts[colId] || 0) + 1;
   }
 
-  for (const [colId, needed] of Object.entries(collectionSizes)) {
-    if ((counts[colId] || 0) >= needed) return true;
+  for (const col of COLLECTION_DATA) {
+    const needed = getContentTileCount(col);
+    if (needed > 0 && (counts[col.id] || 0) >= needed) return true;
   }
 
   return false;
