@@ -1,8 +1,8 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { isRowComplete, isColComplete } from '../lib/puzzle.js';
-import { getSetting } from '../lib/settings.js';
+// getSetting import removed (touchOffset feature removed)
 
-const TOUCH_OFFSET_Y = -30; // pixels above finger
+// Touch offset removed — direct touch position used
 
 function getColors() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -61,23 +61,15 @@ export default function GameCanvas({
   const highlightRef = useRef({ row: -1, col: -1 });
   const lastTouchRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
-  const autoXAnimRef = useRef(new Set());
+  // autoXAnimRef removed — auto-X uses same style as regular X
   // mistakeFlashRef removed — wrong cells use permanent red X (cell value 3)
-  const touchOffsetActiveRef = useRef(false); // true when touch offset crosshair is visible
+  // touchOffsetActiveRef removed
   const rafRef = useRef(null); // requestAnimationFrame id for batched rendering
   const renderRef = useRef(null); // always points to latest render function
 
   // Mistake flash removed — wrong cells are permanently red X (cell value 3)
 
-  useEffect(() => {
-    if (autoXCells.length > 0) {
-      autoXAnimRef.current = new Set(autoXCells.map(c => `${c.row}-${c.col}`));
-      const timer = setTimeout(() => {
-        autoXAnimRef.current = new Set();
-      }, 600);
-      return () => clearTimeout(timer);
-    }
-  }, [autoXCells]);
+  // autoX animation effect removed — no visual distinction needed
 
   const getLayout = useCallback(() => {
     if (!puzzle) return null;
@@ -262,7 +254,6 @@ export default function GameCanvas({
     }
 
     // ── Cells ──
-    const animatingAutoX = autoXAnimRef.current;
 
     for (let i = 0; i < size; i++) {
       for (let j = 0; j < size; j++) {
@@ -292,7 +283,6 @@ export default function GameCanvas({
           ctx.closePath();
           ctx.fill();
         } else if (cell === 2 || cell === 3) {
-          const isAutoX = animatingAutoX.has(key);
           const isMistake = cell === 3;
           ctx.strokeStyle = isMistake ? COLORS.mistakeBorder : COLORS.xMark;
           ctx.lineWidth = 2;
@@ -325,7 +315,7 @@ export default function GameCanvas({
     }
 
     // (crosshair indicator removed)
-  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, controllerMode, cursorRow, cursorCol, darkMode]);
+  }, [puzzle, playerGrid, getLayout, isComplete, controllerMode, cursorRow, cursorCol, darkMode]);
 
   // Keep renderRef always pointing to latest render function
   renderRef.current = render;
@@ -389,10 +379,7 @@ export default function GameCanvas({
       if (isTouch && e.touches.length > 1) return;
       if (e.type === 'touchstart') e.preventDefault();
 
-      // Apply touch offset when setting enabled
-      const useOffset = isTouch && getSetting('touchOffset');
-      const clientY = useOffset ? touch.clientY + TOUCH_OFFSET_Y : touch.clientY;
-      const cell = getCellAt(touch.clientX, clientY);
+      const cell = getCellAt(touch.clientX, touch.clientY);
 
       if (!cell) return;
 
@@ -408,7 +395,6 @@ export default function GameCanvas({
       interaction.dragDirection = null;
       interaction.isTouch = isTouch;
 
-      touchOffsetActiveRef.current = useOffset;
       highlightRef.current = { row: cell.row, col: cell.col };
       lastTouchRef.current = { row: cell.row, col: cell.col };
       scheduleRender();
@@ -425,9 +411,7 @@ export default function GameCanvas({
       if (e.type === 'touchmove') e.preventDefault();
 
       const interaction = interactionRef.current;
-      const useOffset = isTouch && touchOffsetActiveRef.current;
-      const clientY = useOffset ? touch.clientY + TOUCH_OFFSET_Y : touch.clientY;
-      const cell = getCellAt(touch.clientX, clientY);
+      const cell = getCellAt(touch.clientX, touch.clientY);
 
       if (cell) {
         // During drag, constrain highlight to locked direction
@@ -513,7 +497,6 @@ export default function GameCanvas({
       interaction.dragDirection = null;
       interaction.isTouch = false;
 
-      touchOffsetActiveRef.current = false;
       highlightRef.current = { row: -1, col: -1 };
       scheduleRender();
     },

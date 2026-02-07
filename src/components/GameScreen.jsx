@@ -61,10 +61,7 @@ export default function GameScreen({
   // Delayed zero-line X application (0.3s after game start)
   useEffect(() => {
     if (gameState.pendingZeroLineX && onApplyZeroLineX) {
-      const timer = setTimeout(() => {
-        onApplyZeroLineX();
-      }, 300);
-      return () => clearTimeout(timer);
+      onApplyZeroLineX();
     }
   }, [gameState.pendingZeroLineX, onApplyZeroLineX]);
 

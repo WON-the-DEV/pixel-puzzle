@@ -92,20 +92,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll,
               </div>
             </div>
 
-            <div className="settings-item" role="button" tabIndex={0} aria-label={`오프셋 커서 ${settings.touchOffset ? '켜짐' : '꺼짐'}`} onClick={() => toggle('touchOffset')} onKeyDown={(e) => e.key === 'Enter' && toggle('touchOffset')}>
-              <div className="settings-item-left">
-                <span className="settings-item-icon">
-                  <TouchIcon size={20} color="var(--accent)" />
-                </span>
-                <div className="settings-item-text">
-                  <span className="settings-item-label">☝️ 오프셋 커서</span>
-                  <span className="settings-item-desc">터치 시 손가락 위쪽 칸을 선택하여 가려짐 방지</span>
-                </div>
-              </div>
-              <div className={`settings-toggle ${settings.touchOffset ? 'on' : ''}`}>
-                <div className="settings-toggle-knob" />
-              </div>
-            </div>
+            {/* offset cursor setting removed */}
 
             {/* 실수 표시는 항상 켜짐 (기본 동작) — 토글 제거됨 */}
           </div>
