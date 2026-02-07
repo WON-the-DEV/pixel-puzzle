@@ -65,6 +65,7 @@ export default function GameCanvas({
   const mistakeFlashRef = useRef(new Set());
   const touchOffsetActiveRef = useRef(false); // true when touch offset crosshair is visible
   const rafRef = useRef(null); // requestAnimationFrame id for batched rendering
+  const renderRef = useRef(null); // always points to latest render function
 
   // Mistake flash animation
   useEffect(() => {
@@ -72,11 +73,11 @@ export default function GameCanvas({
       mistakeFlashRef.current = new Set(mistakeFlashCells.map(c => `${c.row}-${c.col}`));
       const timer = setTimeout(() => {
         mistakeFlashRef.current = new Set();
-        // Re-render to clear flash — use scheduleRender (defined below) via ref
+        // Re-render to clear flash — use renderRef to always call latest render
         if (rafRef.current) cancelAnimationFrame(rafRef.current);
         rafRef.current = requestAnimationFrame(() => {
           rafRef.current = null;
-          render();
+          if (renderRef.current) renderRef.current();
         });
       }, 500);
       return () => clearTimeout(timer);
@@ -352,14 +353,17 @@ export default function GameCanvas({
     // (crosshair indicator removed)
   }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
-  // Batched render via requestAnimationFrame — avoids multiple redraws per frame during fast drag
+  // Keep renderRef always pointing to latest render function
+  renderRef.current = render;
+
+  // Batched render via requestAnimationFrame — always uses latest render via ref
   const scheduleRender = useCallback(() => {
     if (rafRef.current) return; // already scheduled
     rafRef.current = requestAnimationFrame(() => {
       rafRef.current = null;
-      render();
+      if (renderRef.current) renderRef.current();
     });
-  }, [render]);
+  }, []);
 
   useEffect(() => {
     render();
