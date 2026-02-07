@@ -136,7 +136,7 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
     : '📤 공유하기';
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="퍼즐 완료" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <ConfettiEffect />
       <div className="modal-content complete-modal">
         <div className="modal-icon">

@@ -11,7 +11,7 @@ import { loadAppState, saveAppState, loadCollectionProgress, saveCollectionProgr
 import { initAudio } from './lib/sound.js';
 import { calculateStars, TOTAL_LEVELS, getSizeForLevel } from './lib/puzzle.js';
 import { loadSettings } from './lib/settings.js';
-import { getDailyPuzzle, getTodayStr, loadDailyState, saveDailyState, calculateStreak } from './lib/dailyChallenge.js';
+import { getDailyPuzzle, getTodayStr, loadDailyState, saveDailyState, calculateStreak, cleanupOldDailyData } from './lib/dailyChallenge.js';
 import { checkAchievements, getAchievementById, incrementDarkModeCount } from './lib/achievements.js';
 
 function hasSeenTutorial() {
@@ -44,6 +44,11 @@ export default function App() {
   const { state: gameState, startLevel, startDaily, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive, applyZeroLineX } = useGame();
   // Track whether we already processed completion for current game instance
   const completionProcessedRef = useRef(false);
+
+  // Cleanup old daily challenge data on startup (90 days)
+  useEffect(() => {
+    cleanupOldDailyData(90);
+  }, []);
 
   // Apply dark mode on initial load
   useEffect(() => {
@@ -340,25 +345,28 @@ export default function App() {
         completedTiles: [...prev.completedTiles, key],
       };
 
-      // 성취 체크 (컬렉션)
+      // 성취 체크 (컬렉션) — use setAppState to read current values without stale closure
       setTimeout(() => {
-        const dailyStreak = calculateStreak();
-        const achContext = {
-          completedLevels: appState.completedLevels,
-          bestStars: appState.bestStars,
-          bestTimes: appState.bestTimes,
-          collectionProgress: newProgress,
-          level: 0,
-          lives: 3,
-          maxLives: 3,
-          elapsedTime: 0,
-          isDark: document.documentElement.getAttribute('data-theme') === 'dark',
-          isDaily: false,
-          puzzleSize: 5,
-          dailyStreak,
-        };
-        const newAchievements = checkAchievements(achContext);
-        showAchievementToasts(newAchievements);
+        setAppState((currentAppState) => {
+          const dailyStreak = calculateStreak();
+          const achContext = {
+            completedLevels: currentAppState.completedLevels,
+            bestStars: currentAppState.bestStars,
+            bestTimes: currentAppState.bestTimes,
+            collectionProgress: newProgress,
+            level: 0,
+            lives: 3,
+            maxLives: 3,
+            elapsedTime: 0,
+            isDark: document.documentElement.getAttribute('data-theme') === 'dark',
+            isDaily: false,
+            puzzleSize: 5,
+            dailyStreak,
+          };
+          const newAchievements = checkAchievements(achContext);
+          showAchievementToasts(newAchievements);
+          return currentAppState; // no change to state
+        });
       }, 100);
 
       return newProgress;
@@ -368,7 +376,7 @@ export default function App() {
       ...prev,
       hints: prev.hints + 1,
     }));
-  }, [appState, showAchievementToasts]);
+  }, [showAchievementToasts]);
 
   // Auto-save daily game progress
   useEffect(() => {

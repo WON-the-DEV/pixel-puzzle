@@ -240,3 +240,105 @@ if (failures.length > 0) {
   }
   console.log(`  ${pass}/${puzzles.length} uniquely solvable by line solving`);
 });
+
+// ══════════════════════════════════════════════════════
+// Collection Tile Puzzle Verification
+// ══════════════════════════════════════════════════════
+console.log('\n\n=== Collection Tile Puzzle Verification ===\n');
+
+// Load collections.js
+const collSrc = fs.readFileSync(path.join(__dirname, '..', 'src', 'lib', 'collections.js'), 'utf8');
+// Convert ESM to CJS
+let collCode = collSrc
+  .replace(/export\s+const\s+/g, 'const ')
+  .replace(/export\s+function\s+/g, 'function ')
+  .replace(/import\s+.*?from\s+['"].*?['"];?\s*/g, '');
+
+// Add generateClues/transpose stubs if needed
+collCode = `
+function generateClues(grid) {
+  return grid.map(row => {
+    const clues = [];
+    let count = 0;
+    for (const cell of row) {
+      if (cell === 1) count++;
+      else { if (count > 0) { clues.push(count); count = 0; } }
+    }
+    if (count > 0) clues.push(count);
+    return clues.length > 0 ? clues : [0];
+  });
+}
+function transpose(grid) {
+  if (!grid.length) return [];
+  return grid[0].map((_, i) => grid.map(row => row[i]));
+}
+` + collCode;
+
+collCode += `\nmodule.exports = { COLLECTION_DATA, extractTilePuzzle, generateMonoClues, transposeGrid };`;
+fs.writeFileSync('/tmp/coll_verify.cjs', collCode);
+const { COLLECTION_DATA, extractTilePuzzle, generateMonoClues, transposeGrid } = require('/tmp/coll_verify.cjs');
+
+let collPass = 0;
+let collFail = 0;
+const collFailures = [];
+
+for (const collection of COLLECTION_DATA) {
+  console.log(`\n── ${collection.emoji} ${collection.name} (${collection.tileSize}×${collection.tileSize}, ${collection.tileRows}×${collection.tileCols} tiles) ──`);
+  
+  for (let tr = 0; tr < collection.tileRows; tr++) {
+    for (let tc = 0; tc < collection.tileCols; tc++) {
+      const { solution } = extractTilePuzzle(collection, tr, tc);
+      const size = solution.length;
+      
+      // Convert multi-color solution to mono (>0 → 1, 0 → 0)
+      const monoSolution = solution.map(row => row.map(cell => cell > 0 ? 1 : 0));
+      
+      // Check if tile has content
+      const totalFilled = monoSolution.flat().filter(c => c === 1).length;
+      if (totalFilled === 0) {
+        console.log(`    Tile [${tr},${tc}] — empty, skipped`);
+        continue;
+      }
+      
+      const { rowClues, colClues } = computeClues(monoSolution);
+      const result = lineSolve(rowClues, colClues, size);
+      
+      const tileNum = tr * collection.tileCols + tc + 1;
+      
+      if (result.solved) {
+        // Verify it matches mono solution
+        let matches = true;
+        for (let i = 0; i < size; i++) {
+          for (let j = 0; j < size; j++) {
+            if (result.grid[i][j] !== monoSolution[i][j]) { matches = false; break; }
+          }
+          if (!matches) break;
+        }
+        
+        if (matches) {
+          console.log(`    ✅ Tile #${tileNum} [${tr},${tc}] — unique (${result.iterations} iter)`);
+          collPass++;
+        } else {
+          console.log(`    ❌ Tile #${tileNum} [${tr},${tc}] — solved but mismatch!`);
+          collFail++;
+          collFailures.push({ collection: collection.name, tile: `#${tileNum} [${tr},${tc}]`, reason: 'solution mismatch' });
+        }
+      } else {
+        let unknowns = 0;
+        result.grid.forEach(row => row.forEach(cell => { if (cell === -1) unknowns++; }));
+        console.log(`    ⚠️  Tile #${tileNum} [${tr},${tc}] — AMBIGUOUS (${unknowns} unknowns)`);
+        collFail++;
+        collFailures.push({ collection: collection.name, tile: `#${tileNum} [${tr},${tc}]`, reason: `ambiguous (${unknowns} unknowns)`, grid: result.grid, monoSolution });
+      }
+    }
+  }
+}
+
+console.log(`\n=== Collection Results ===`);
+console.log(`Passed: ${collPass}`);
+console.log(`Failed: ${collFail}`);
+
+if (collFailures.length > 0) {
+  console.log('\nFailed collection tiles:');
+  collFailures.forEach(f => console.log(`  ${f.collection} ${f.tile}: ${f.reason}`));
+}

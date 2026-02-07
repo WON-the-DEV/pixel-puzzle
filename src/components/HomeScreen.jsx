@@ -7,7 +7,7 @@ import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, Set
 // Hint modal component
 function HintModal({ hints, onWatchAd, onBuyHints, onClose }) {
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onClose()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="힌트 충전" onClick={(e) => e.target === e.currentTarget && onClose()}>
       <div className="modal-content">
         <h2 style={{ marginBottom: 8 }}>💡 힌트 충전</h2>
         <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
@@ -229,7 +229,7 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
 
               return (
                 <div className="level-section-group" key={section.name}>
-                  <div className="section-header" onClick={() => toggleSection(section.name)}>
+                  <div className="section-header" role="button" tabIndex={0} aria-expanded={isOpen} onClick={() => toggleSection(section.name)} onKeyDown={(e) => e.key === 'Enter' && toggleSection(section.name)}>
                     <div className="section-header-left">
                       <div className="section-title" style={{ color: section.colorRaw, marginBottom: 0 }}>
                         <DifficultyBadge color={section.colorRaw} label={section.name} />
@@ -256,7 +256,7 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
                         if (isLocked) className += ' locked';
                         if (isCurrent) className += ' current';
 
-                        const puzzleInfo = puzzleCache[level] || (puzzleCache[level] = createPuzzleForLevel(level));
+                        const puzzleInfo = getCachedSolution(level);
                         const presetName = puzzleInfo.name;
 
                         const bestTime = bestTimes[level];
@@ -313,7 +313,7 @@ export default function HomeScreen({ appState, collectionProgress, onStartLevel,
           </span>
           <span className="home-nav-label">퍼즐</span>
         </div>
-        <div className="home-nav-item" onClick={onOpenSettings}>
+        <div className="home-nav-item" role="button" tabIndex={0} onClick={onOpenSettings} onKeyDown={(e) => e.key === 'Enter' && onOpenSettings()}>
           <span className="home-nav-icon">
             <SettingsIcon size={22} />
           </span>

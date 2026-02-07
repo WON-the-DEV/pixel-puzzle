@@ -290,6 +290,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
   const mistakeFlashAnimRef = useRef(new Set());
+  const rafRef = useRef(null);
 
   const DRAG_THRESHOLD = 8;
 
@@ -306,7 +307,11 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       mistakeFlashAnimRef.current = new Set(mistakeFlashCells.map(c => `${c.row}-${c.col}`));
       const timer = setTimeout(() => {
         mistakeFlashAnimRef.current = new Set();
-        requestAnimationFrame(() => render());
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          render();
+        });
       }, 500);
       return () => clearTimeout(timer);
     }
@@ -531,7 +536,15 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     }
   }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
-  useEffect(() => { render(); }, [render]);
+  const scheduleRender = useCallback(() => {
+    if (rafRef.current) return;
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      render();
+    });
+  }, [render]);
+
+  useEffect(() => { render(); return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); }; }, [render]);
   useEffect(() => { const h = () => render(); window.addEventListener('resize', h); return () => window.removeEventListener('resize', h); }, [render]);
   useEffect(() => {
     const ob = new MutationObserver(() => render());
@@ -568,8 +581,8 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     i.startX = touch.clientX; i.startY = touch.clientY; i.dragValue = null;
     highlightRef.current = { row: cell.row, col: cell.col };
     lastTouchRef.current = { row: cell.row, col: cell.col };
-    render();
-  }, [getCellAt, isComplete, render, controllerMode]);
+    scheduleRender();
+  }, [getCellAt, isComplete, scheduleRender, controllerMode]);
 
   const handlePointerMove = useCallback((e) => {
     if (controllerMode) return;
@@ -598,8 +611,8 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     if (inter.isDragging && inter.dragValue !== null && cell && !isComplete) {
       onFillCell(cell.row, cell.col, inter.dragValue);
     }
-    render();
-  }, [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode, controllerMode]);
+    scheduleRender();
+  }, [getCellAt, onFillCell, onToggleCell, scheduleRender, isComplete, playerGrid, mode, controllerMode]);
 
   const handlePointerUp = useCallback((e) => {
     if (controllerMode) return;
@@ -613,8 +626,8 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
     if (inter.isDragging) onEndDrag();
     inter.isDown = false; inter.isDragging = false; inter.dragValue = null; inter.startCell = null;
     highlightRef.current = { row: -1, col: -1 };
-    render();
-  }, [onEndDrag, onToggleCell, render, isComplete, controllerMode]);
+    scheduleRender();
+  }, [onEndDrag, onToggleCell, scheduleRender, isComplete, controllerMode]);
 
   useEffect(() => {
     const canvas = canvasRef.current;
@@ -649,6 +662,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const [displayTime, setDisplayTime] = useState('00:00');
   const timerRef = useRef(null);
   const wasCompleteRef = useRef(false);
+  const wasGameOverRef = useRef(false);
 
   // Controller mode
   const [controllerMode, setControllerMode] = useState(false);
@@ -690,7 +704,14 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   }, [state.lostLife, state.lives, state.isGameOver]);
 
   useEffect(() => {
-    if (state.isGameOver) { playGameOver(); hapticGameOver(); }
+    if (state.isGameOver && !wasGameOverRef.current) {
+      wasGameOverRef.current = true;
+      playGameOver();
+      hapticGameOver();
+    }
+    if (!state.isGameOver && wasGameOverRef.current) {
+      wasGameOverRef.current = false;
+    }
   }, [state.isGameOver]);
 
   // 자동 저장: 게임 진행 중 셀 변경 시
@@ -907,7 +928,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
       )}
 
       {state.isComplete && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onGoHome()}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="타일 완료" onClick={(e) => e.target === e.currentTarget && onGoHome()}>
           <div className="modal-content complete-modal">
             <div className="modal-icon" style={{ fontSize: 56 }}>{collection.emoji}</div>
             <h2>타일 완료!</h2>
@@ -963,7 +984,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
       )}
 
       {state.isGameOver && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onGoHome()}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="게임 오버" onClick={(e) => e.target === e.currentTarget && onGoHome()}>
           <div className="modal-content game-over-modal">
             <div className="modal-icon" style={{ fontSize: 56 }}>💔</div>
             <h2>게임 오버</h2>

@@ -307,3 +307,43 @@ export function isDailyCompleted(dateStr) {
   const state = loadDailyState(dateStr);
   return state && state.completed;
 }
+
+// ─── 90일 이전 일일 챌린지 데이터 자동 정리 ───
+export function cleanupOldDailyData(maxAgeDays = 90) {
+  try {
+    const cutoffDate = new Date();
+    cutoffDate.setDate(cutoffDate.getDate() - maxAgeDays);
+
+    const keysToRemove = [];
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i);
+      if (!key) continue;
+
+      // nonogram_daily_YYYY-MM-DD (state data)
+      if (key.startsWith(DAILY_PREFIX) && !key.startsWith('nonogram_daily_game_')) {
+        const dateStr = key.slice(DAILY_PREFIX.length);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          const d = new Date(dateStr + 'T00:00:00');
+          if (d < cutoffDate) keysToRemove.push(key);
+        }
+      }
+
+      // nonogram_daily_game_YYYY-MM-DD (saved game data)
+      if (key.startsWith('nonogram_daily_game_')) {
+        const dateStr = key.slice('nonogram_daily_game_'.length);
+        if (/^\d{4}-\d{2}-\d{2}$/.test(dateStr)) {
+          const d = new Date(dateStr + 'T00:00:00');
+          if (d < cutoffDate) keysToRemove.push(key);
+        }
+      }
+    }
+
+    for (const key of keysToRemove) {
+      localStorage.removeItem(key);
+    }
+
+    return keysToRemove.length;
+  } catch {
+    return 0;
+  }
+}

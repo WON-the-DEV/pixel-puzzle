@@ -7,7 +7,7 @@ export default function GameOverModal({ level, onRestart, onHome, onRevive, used
   };
 
   return (
-    <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && onHome()}>
+    <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="게임 오버" onClick={(e) => e.target === e.currentTarget && onHome()}>
       <div className="modal-content game-over-modal">
         <div className="modal-icon">
           <BrokenHeartIcon size={64} />

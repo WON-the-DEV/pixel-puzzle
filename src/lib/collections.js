@@ -49,7 +49,7 @@ const CAT_PICTURE = [
 // ─── 컬렉션 2: 꽃 (3×3 타일, 각 10×10 = 총 30×30) ───
 const FLOWER_PALETTE = ['#FF6B6B', '#FF8E8E', '#4ECDC4', '#2ECC71', '#F39C12'];
 
-// Bug 7: Balanced flower — outlines with some fill, 25-55% per tile
+// Generate flower picture with uniquely-solvable tiles
 function generateFlowerPicture() {
   const size = 30;
   const pic = Array(size).fill(null).map(() => Array(size).fill(0));
@@ -120,41 +120,234 @@ function generateFlowerPicture() {
     }
   }
   
-  // Corner decorations — small dots/shapes to give edge tiles content
-  // Top-left: small leaf bud
-  const buds = [
-    [2, 3], [2, 4], [3, 3], [3, 4], [4, 2],
-    [1, 5], [3, 6], [5, 2], [6, 3],
+  // Corner decorations — structured shapes for unique solvability
+  // Top-left [0,0]: connected L-shapes and lines (no isolated dots)
+  const budsTopLeft = [
+    // Horizontal bar across row 1
+    [1, 2], [1, 3], [1, 4], [1, 5], [1, 6],
+    // Vertical bar col 3
+    [2, 3], [3, 3], [4, 3], [5, 3],
+    // Small cross at (7,5)
+    [6, 5], [7, 4], [7, 5], [7, 6], [8, 5],
+    // Diagonal steps
+    [4, 7], [5, 8], [6, 9],
+    // Bottom row fill
+    [8, 1], [8, 2], [9, 0], [9, 1], [9, 2], [9, 3],
   ];
-  for (const [by, bx] of buds) {
-    if (pic[by][bx] === 0) pic[by][bx] = 4;
+  for (const [by, bx] of budsTopLeft) {
+    if (by < size && bx < size && pic[by][bx] === 0) pic[by][bx] = 4;
   }
-  // Top-right: small decoration
+  // Top-right [0,2]: structured decoration
   const topRight = [
-    [1, 27], [2, 26], [2, 27], [3, 25], [3, 26],
-    [4, 27], [5, 28], [6, 27],
+    // Horizontal bar
+    [1, 24], [1, 25], [1, 26], [1, 27],
+    // L-shape
+    [2, 27], [3, 27], [3, 26], [3, 25],
+    // Connected block
+    [5, 24], [5, 25], [6, 24], [6, 25],
+    // Vertical bar
+    [7, 28], [8, 28], [9, 28], [9, 27],
+    // Row fill at bottom
+    [9, 20], [9, 21], [9, 22], [9, 23],
   ];
   for (const [by, bx] of topRight) {
-    if (bx < size && pic[by][bx] === 0) pic[by][bx] = 2;
+    if (by < size && bx < size && pic[by][bx] === 0) pic[by][bx] = 2;
   }
-  // Bottom-left
+  // Bottom-left [2,0]: structured L and bar shapes
   const botLeft = [
-    [27, 2], [27, 3], [28, 3], [28, 4], [26, 1],
-    [29, 2], [29, 3], [26, 4], [25, 2],
+    // Top bar
+    [20, 0], [20, 1], [20, 2], [20, 3],
+    // Vertical descent
+    [21, 0], [22, 0], [23, 0],
+    // Connected block
+    [24, 2], [24, 3], [25, 2], [25, 3],
+    // Horizontal bar
+    [27, 1], [27, 2], [27, 3], [27, 4],
+    // L-shape bottom
+    [28, 4], [29, 2], [29, 3], [29, 4],
+    // Extra for fill rate
+    [26, 6], [26, 7], [27, 7],
   ];
   for (const [by, bx] of botLeft) {
-    if (by < size && pic[by][bx] === 0) pic[by][bx] = 4;
+    if (by < size && bx < size && pic[by][bx] === 0) pic[by][bx] = 4;
   }
-  // Bottom-right
+  // Bottom-right [2,2]: keep existing but add more structure
   const botRight = [
-    [27, 27], [27, 26], [28, 26], [28, 27], [29, 28],
-    [26, 28], [25, 27], [29, 26],
+    // Connected block
+    [26, 26], [26, 27], [27, 26], [27, 27],
+    // Horizontal bar
+    [28, 24], [28, 25], [28, 26], [28, 27],
+    // Vertical bar
+    [29, 25], [29, 26],
+    // Extra
+    [24, 28], [25, 28], [25, 29],
   ];
   for (const [by, bx] of botRight) {
     if (by < size && bx < size && pic[by][bx] === 0) pic[by][bx] = 1;
   }
 
+  // Post-process: ensure each 10x10 tile has enough connected content
+  // Add horizontal bars to sparse areas for unique solvability
+  ensureTilesSolvable(pic, 10, 3, 3, 4);
+
   return pic;
+}
+
+// ─── Helper: ensure tiles are uniquely solvable by line solving ───
+// Uses an inline line solver to verify and iteratively adds structure
+function ensureTilesSolvable(pic, tileSize, tileRows, tileCols, fillColor) {
+  const size = pic.length;
+  const cols = (pic[0] || []).length;
+  
+  function computeClues(monoGrid) {
+    const sz = monoGrid.length;
+    const rowClues = [], colClues = [];
+    for (let i = 0; i < sz; i++) {
+      const c = []; let run = 0;
+      for (let j = 0; j < sz; j++) { if (monoGrid[i][j]===1) run++; else { if(run>0){c.push(run);run=0;} } }
+      if (run>0) c.push(run);
+      rowClues.push(c.length>0?c:[0]);
+    }
+    for (let j = 0; j < sz; j++) {
+      const c = []; let run = 0;
+      for (let i = 0; i < sz; i++) { if (monoGrid[i][j]===1) run++; else { if(run>0){c.push(run);run=0;} } }
+      if (run>0) c.push(run);
+      colClues.push(c.length>0?c:[0]);
+    }
+    return { rowClues, colClues };
+  }
+  
+  function genLineCombos(clue, len) {
+    if (clue.length===1&&clue[0]===0) return [new Array(len).fill(0)];
+    const results = [];
+    const nb = clue.length;
+    function bt(bi, pos, line) {
+      if (bi===nb) { const r=[...line]; for(let i=pos;i<len;i++)r[i]=0; results.push(r); return; }
+      const rl = clue.slice(bi+1).reduce((a,b)=>a+b,0)+(nb-bi-1);
+      for(let s=pos;s<=len-clue[bi]-rl;s++){
+        const nl=[...line]; for(let i=pos;i<s;i++)nl[i]=0;
+        for(let i=s;i<s+clue[bi];i++)nl[i]=1;
+        if(bi<nb-1&&s+clue[bi]<len){nl[s+clue[bi]]=0;bt(bi+1,s+clue[bi]+1,nl);}
+        else bt(bi+1,s+clue[bi],nl);
+      }
+    }
+    bt(0,0,new Array(len).fill(0));
+    return results;
+  }
+  
+  function isTileSolvable(monoGrid) {
+    const sz = monoGrid.length;
+    const {rowClues, colClues} = computeClues(monoGrid);
+    const grid = monoGrid.map(r=>r.map(()=>-1));
+    let changed = true, iter = 0;
+    while(changed && iter<200) {
+      changed=false; iter++;
+      for(let i=0;i<sz;i++){
+        const line = grid[i];
+        const combos = genLineCombos(rowClues[i],sz).filter(c=>{for(let j=0;j<sz;j++){if(line[j]!==-1&&line[j]!==c[j])return false;}return true;});
+        if(!combos.length)return false;
+        for(let j=0;j<sz;j++){if(line[j]!==-1)continue;if(combos.every(c=>c[j]===combos[0][j])){grid[i][j]=combos[0][j];changed=true;}}
+      }
+      for(let j=0;j<sz;j++){
+        const line = grid.map(r=>r[j]);
+        const combos = genLineCombos(colClues[j],sz).filter(c=>{for(let i=0;i<sz;i++){if(line[i]!==-1&&line[i]!==c[i])return false;}return true;});
+        if(!combos.length)return false;
+        for(let i=0;i<sz;i++){if(grid[i][j]!==-1)continue;if(combos.every(c=>c[i]===combos[0][i])){grid[i][j]=combos[0][i];changed=true;}}
+      }
+    }
+    return grid.every(r=>r.every(c=>c!==-1));
+  }
+
+  for (let tr = 0; tr < tileRows; tr++) {
+    for (let tc = 0; tc < tileCols; tc++) {
+      const startR = tr * tileSize;
+      const startC = tc * tileSize;
+      
+      // Extract mono tile
+      const mono = [];
+      let hasFilled = false;
+      for (let r = 0; r < tileSize; r++) {
+        const row = [];
+        for (let c = 0; c < tileSize; c++) {
+          const pr = startR + r, pc = startC + c;
+          const val = (pr < size && pc < cols) ? (pic[pr][pc] > 0 ? 1 : 0) : 0;
+          row.push(val);
+          if (val) hasFilled = true;
+        }
+        mono.push(row);
+      }
+      if (!hasFilled) continue;
+      
+      if (isTileSolvable(mono)) continue;
+      
+      // Not uniquely solvable — try adding structure iteratively
+      // Strategy: add full horizontal bars, then vertical bars, then cross, until solvable
+      const attempts = [
+        // Try adding a horizontal bar at each row
+        ...Array.from({length: tileSize}, (_, r) => ({type: 'hbar', row: r})),
+        // Try adding a vertical bar at each column
+        ...Array.from({length: tileSize}, (_, c) => ({type: 'vbar', col: c})),
+        // Full cross
+        {type: 'cross'},
+      ];
+      
+      let solved = false;
+      for (const attempt of attempts) {
+        const testMono = mono.map(r => [...r]);
+        
+        if (attempt.type === 'hbar') {
+          // Fill the entire row (empty cells only)
+          for (let c = 0; c < tileSize; c++) {
+            if (testMono[attempt.row][c] === 0) testMono[attempt.row][c] = 1;
+          }
+        } else if (attempt.type === 'vbar') {
+          for (let r = 0; r < tileSize; r++) {
+            if (testMono[r][attempt.col] === 0) testMono[r][attempt.col] = 1;
+          }
+        } else if (attempt.type === 'cross') {
+          const mid = Math.floor(tileSize / 2);
+          for (let c = 0; c < tileSize; c++) { if (testMono[mid][c] === 0) testMono[mid][c] = 1; }
+          for (let r = 0; r < tileSize; r++) { if (testMono[r][mid] === 0) testMono[r][mid] = 1; }
+        }
+        
+        if (isTileSolvable(testMono)) {
+          // Apply to pic
+          for (let r = 0; r < tileSize; r++) {
+            for (let c = 0; c < tileSize; c++) {
+              if (testMono[r][c] === 1 && mono[r][c] === 0) {
+                const pr = startR + r, pc = startC + c;
+                if (pr < size && pc < cols) pic[pr][pc] = fillColor;
+              }
+            }
+          }
+          solved = true;
+          break;
+        }
+      }
+      
+      if (!solved) {
+        // Last resort: add both a horizontal and vertical bar
+        for (let rowOff = 0; rowOff < tileSize && !solved; rowOff++) {
+          for (let colOff = 0; colOff < tileSize && !solved; colOff++) {
+            const testMono = mono.map(r => [...r]);
+            for (let c = 0; c < tileSize; c++) { if (testMono[rowOff][c] === 0) testMono[rowOff][c] = 1; }
+            for (let r = 0; r < tileSize; r++) { if (testMono[r][colOff] === 0) testMono[r][colOff] = 1; }
+            if (isTileSolvable(testMono)) {
+              for (let r = 0; r < tileSize; r++) {
+                for (let c = 0; c < tileSize; c++) {
+                  if (testMono[r][c] === 1 && mono[r][c] === 0) {
+                    const pr = startR + r, pc = startC + c;
+                    if (pr < size && pc < cols) pic[pr][pc] = fillColor;
+                  }
+                }
+              }
+              solved = true;
+            }
+          }
+        }
+      }
+    }
+  }
 }
 
 // ─── 컬렉션 3: 로켓 (3×3 타일, 각 10×10 = 총 30×30) ───
@@ -252,57 +445,122 @@ function generateRocketPicture() {
     }
   }
 
-  // 별 배경 + 행성/성운 — all tiles get meaningful content
-  // Scattered stars (single dots)
-  const stars = [
-    [2, 3], [5, 25], [1, 20], [8, 2], [3, 27], 
-    [25, 3], [27, 26], [10, 27], [22, 1],
-    [0, 8], [7, 28], [28, 8], [15, 0], [15, 29],
-    [4, 26], [26, 4], [0, 0], [29, 29], [6, 0],
-    [24, 28], [1, 1], [28, 1], [1, 28],
+  // 별 배경 + 행성/성운 — all tiles get structured content for unique solvability
+  // (No isolated single dots — only connected shapes)
+
+  // Planet top-left [0,0] — larger connected planet with ring
+  const planetTL = [
+    // Planet body (solid block)
+    [2, 2], [2, 3], [2, 4], [2, 5],
+    [3, 1], [3, 2], [3, 3], [3, 4], [3, 5], [3, 6],
+    [4, 1], [4, 2], [4, 3], [4, 4], [4, 5], [4, 6],
+    [5, 2], [5, 3], [5, 4], [5, 5],
+    // Ring around planet
+    [1, 3], [1, 4],
+    [6, 3], [6, 4],
+    // Stars as short lines (not single dots)
+    [0, 7], [0, 8],
+    [7, 0], [7, 1],
+    [8, 6], [8, 7],
+    [9, 1], [9, 2], [9, 3],
   ];
-  for (const [sy, sx] of stars) {
-    if (sy < size && sx < size && pic[sy][sx] === 0) pic[sy][sx] = 5;
-  }
-  
-  // Small planet top-left (gives tile [0,0] more content)
-  const planetTL = [[3, 4], [3, 5], [4, 3], [4, 4], [4, 5], [4, 6], [5, 4], [5, 5], [6, 3], [6, 4], [6, 5], [7, 4], [7, 5], [8, 4]];
   for (const [py, px] of planetTL) {
     if (pic[py][px] === 0) pic[py][px] = 2;
   }
   
-  // Space station mid-left (gives tile [1,0] more content)
+  // Space station mid-left [1,0] — structured grid pattern
   const stationML = [
-    [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7],
-    [11, 3], [11, 5], [11, 7],
-    [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7],
-    [13, 3], [13, 5],
-    [14, 1], [14, 2], [14, 3], [14, 4], [14, 5], [14, 6], [14, 7], [14, 8],
-    [15, 3], [15, 5],
-    [16, 2], [16, 3], [16, 4], [16, 5], [16, 6], [16, 7],
-    [17, 4], [17, 5], [18, 3], [18, 4], [18, 5], [18, 6],
+    // Horizontal bars
+    [10, 0], [10, 1], [10, 2], [10, 3], [10, 4], [10, 5], [10, 6], [10, 7], [10, 8],
+    [12, 0], [12, 1], [12, 2], [12, 3], [12, 4], [12, 5], [12, 6], [12, 7], [12, 8],
+    [14, 0], [14, 1], [14, 2], [14, 3], [14, 4], [14, 5], [14, 6], [14, 7], [14, 8], [14, 9],
+    [16, 0], [16, 1], [16, 2], [16, 3], [16, 4], [16, 5], [16, 6], [16, 7],
+    [18, 1], [18, 2], [18, 3], [18, 4], [18, 5], [18, 6],
+    // Vertical connectors
+    [11, 2], [11, 5], [11, 8],
+    [13, 2], [13, 5],
+    [15, 2], [15, 5],
+    [17, 3], [17, 4], [17, 5],
+    [19, 2], [19, 3], [19, 4],
   ];
   for (const [sy, sx] of stationML) {
     if (sy < size && sx < size && pic[sy][sx] === 0) pic[sy][sx] = 3;
   }
   
-  // Small nebula top-right (gives tile [0,2] content)
-  const nebulaTR = [[2, 24], [2, 25], [3, 23], [3, 24], [3, 25], [3, 26], [4, 24], [4, 25], [5, 23], [5, 26], [6, 24], [6, 25]];
+  // Nebula top-right [0,2] — larger connected shape
+  const nebulaTR = [
+    // Cloud shape
+    [1, 22], [1, 23], [1, 24],
+    [2, 21], [2, 22], [2, 23], [2, 24], [2, 25],
+    [3, 22], [3, 23], [3, 24], [3, 25], [3, 26],
+    [4, 23], [4, 24], [4, 25],
+    // Tail
+    [5, 25], [5, 26], [6, 26], [6, 27],
+    // Star lines (connected)
+    [7, 22], [7, 23],
+    [8, 28], [8, 29],
+    [9, 21], [9, 22], [9, 23],
+  ];
   for (const [ny, nx] of nebulaTR) {
     if (nx < size && pic[ny][nx] === 0) pic[ny][nx] = 4;
   }
+
+  // Right side of mid tiles [1,2] — add more structure
+  const midRight = [
+    // Comet shape
+    [10, 22], [10, 23], [10, 24], [10, 25],
+    [11, 25], [11, 26],
+    [12, 26], [12, 27],
+    // Galaxy swirl
+    [14, 25], [14, 26], [14, 27],
+    [15, 24], [15, 27], [15, 28],
+    [16, 25], [16, 26], [16, 27],
+    // Star cluster
+    [18, 22], [18, 23], [18, 24],
+    [19, 22], [19, 24],
+  ];
+  for (const [my, mx] of midRight) {
+    if (my < size && mx < size && pic[my][mx] === 0) pic[my][mx] = 5;
+  }
   
-  // Asteroid cluster bottom-left (gives tile [2,0] content)
-  const asteroidBL = [[22, 3], [22, 4], [23, 2], [23, 3], [23, 4], [24, 3], [24, 4], [24, 5], [25, 4], [25, 5], [26, 3], [26, 4], [27, 4], [27, 5]];
+  // Asteroid cluster bottom-left [2,0] — larger connected shapes
+  const asteroidBL = [
+    // Large asteroid
+    [21, 2], [21, 3], [21, 4],
+    [22, 1], [22, 2], [22, 3], [22, 4], [22, 5],
+    [23, 1], [23, 2], [23, 3], [23, 4], [23, 5],
+    [24, 2], [24, 3], [24, 4],
+    // Small asteroid
+    [26, 6], [26, 7],
+    [27, 5], [27, 6], [27, 7], [27, 8],
+    [28, 6], [28, 7],
+    // Star lines
+    [20, 8], [20, 9],
+    [29, 0], [29, 1], [29, 2],
+  ];
   for (const [ay, ax] of asteroidBL) {
     if (ay < size && pic[ay][ax] === 0) pic[ay][ax] = 3;
   }
   
-  // Moon bottom-right (gives tile [2,2] content)
-  const moonBR = [[23, 25], [23, 26], [24, 24], [24, 25], [24, 26], [24, 27], [25, 25], [25, 26], [25, 27], [26, 24], [26, 25], [26, 26], [27, 25], [27, 26]];
+  // Moon bottom-right [2,2] — larger connected crescent
+  const moonBR = [
+    // Crescent moon
+    [21, 25], [21, 26], [21, 27],
+    [22, 24], [22, 25], [22, 27], [22, 28],
+    [23, 24], [23, 28],
+    [24, 24], [24, 25], [24, 27], [24, 28],
+    [25, 25], [25, 26], [25, 27],
+    // Star lines
+    [27, 22], [27, 23],
+    [28, 28], [28, 29],
+    [29, 24], [29, 25], [29, 26],
+  ];
   for (const [my, mx] of moonBR) {
     if (my < size && mx < size && pic[my][mx] === 0) pic[my][mx] = 3;
   }
+
+  // Post-process: ensure each 10x10 tile has enough connected content
+  ensureTilesSolvable(pic, 10, 3, 3, 5);
 
   return pic;
 }
@@ -374,17 +632,17 @@ const TURTLE_PICTURE = [
   [0,0,1,5,1,1,0,0,0,4,1,1,1,1,1,1,4,0,0,0],
   [0,0,0,1,1,0,0,0,4,1,1,4,4,1,1,4,1,4,0,0],
   // Row 5-9 (Tile row 1) — 등껍질 + 지느러미
-  [0,0,0,0,3,3,0,4,1,1,4,1,1,4,1,1,4,1,4,0],
-  [3,3,0,0,0,3,4,1,1,1,1,4,4,1,1,1,1,1,4,0],
-  [0,3,3,0,0,0,4,1,1,4,1,1,1,4,1,1,4,4,0,0],
-  [0,0,3,3,0,0,4,1,1,1,4,4,4,1,1,1,4,0,0,0],
+  [0,0,0,3,3,3,0,4,1,1,4,1,1,4,1,1,4,1,4,0],
+  [3,3,3,0,0,3,4,1,1,1,1,4,4,1,1,1,1,1,4,0],
+  [0,3,3,3,0,0,4,1,1,4,1,1,1,4,1,1,4,4,0,0],
+  [0,0,3,3,3,0,4,1,1,1,4,4,4,1,1,1,4,0,0,0],
   [0,0,0,0,0,0,0,4,1,1,1,1,1,1,1,4,0,0,0,0],
   // Row 10-14 (Tile row 2) — 하체 + 뒷지느러미 + 꼬리
   [0,0,0,0,0,0,0,0,4,4,4,4,4,4,4,0,0,0,0,0],
-  [0,0,0,0,0,3,3,0,0,0,0,0,0,0,0,0,3,3,0,0],
-  [0,0,0,0,0,0,3,3,0,0,0,0,0,0,0,3,3,0,0,0],
+  [0,0,0,0,0,3,3,3,0,0,0,0,0,0,0,3,3,3,0,0],
+  [0,0,0,0,0,3,3,3,0,0,0,0,0,0,3,3,3,0,0,0],
+  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1,1],
   [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1,1],
-  [0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,0,1],
 ];
 
 // ─── 컬렉션 7: 음식 (3×4 타일, 각 5×5 = 총 15×20) ───
@@ -490,7 +748,7 @@ export const COLLECTION_DATA = [
     emoji: '🐢',
     description: '12개의 퍼즐을 풀어 거북이를 완성하세요',
     palette: TURTLE_PALETTE,
-    bigPicture: TURTLE_PICTURE,
+    bigPicture: (() => { const p = TURTLE_PICTURE.map(r=>[...r]); ensureTilesSolvable(p,5,3,4,4); return p; })(),
     tileRows: 3,
     tileCols: 4,
     tileSize: 5,

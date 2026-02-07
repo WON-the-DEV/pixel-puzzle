@@ -72,8 +72,12 @@ export default function GameCanvas({
       mistakeFlashRef.current = new Set(mistakeFlashCells.map(c => `${c.row}-${c.col}`));
       const timer = setTimeout(() => {
         mistakeFlashRef.current = new Set();
-        // Re-render to clear flash
-        requestAnimationFrame(() => render());
+        // Re-render to clear flash — use scheduleRender (defined below) via ref
+        if (rafRef.current) cancelAnimationFrame(rafRef.current);
+        rafRef.current = requestAnimationFrame(() => {
+          rafRef.current = null;
+          render();
+        });
       }, 500);
       return () => clearTimeout(timer);
     }

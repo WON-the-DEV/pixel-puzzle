@@ -62,7 +62,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll,
         <div className="settings-section">
           <div className="settings-section-title">게임</div>
           <div className="settings-card">
-            <div className="settings-item" onClick={() => toggle('sound')}>
+            <div className="settings-item" role="button" tabIndex={0} aria-label={`사운드 효과 ${settings.sound ? '켜짐' : '꺼짐'}`} onClick={() => toggle('sound')} onKeyDown={(e) => e.key === 'Enter' && toggle('sound')}>
               <div className="settings-item-left">
                 <span className="settings-item-icon">
                   <SoundIcon size={20} color="var(--accent)" />
@@ -77,7 +77,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll,
               </div>
             </div>
 
-            <div className="settings-item" onClick={() => toggle('haptic')}>
+            <div className="settings-item" role="button" tabIndex={0} aria-label={`햅틱 피드백 ${settings.haptic ? '켜짐' : '꺼짐'}`} onClick={() => toggle('haptic')} onKeyDown={(e) => e.key === 'Enter' && toggle('haptic')}>
               <div className="settings-item-left">
                 <span className="settings-item-icon">
                   <VibrationIcon size={20} color="var(--accent)" />
@@ -92,7 +92,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll,
               </div>
             </div>
 
-            <div className="settings-item" onClick={() => toggle('touchOffset')}>
+            <div className="settings-item" role="button" tabIndex={0} aria-label={`오프셋 커서 ${settings.touchOffset ? '켜짐' : '꺼짐'}`} onClick={() => toggle('touchOffset')} onKeyDown={(e) => e.key === 'Enter' && toggle('touchOffset')}>
               <div className="settings-item-left">
                 <span className="settings-item-icon">
                   <TouchIcon size={20} color="var(--accent)" />
@@ -115,7 +115,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll,
         <div className="settings-section">
           <div className="settings-section-title">화면</div>
           <div className="settings-card">
-            <div className="settings-item" onClick={() => toggle('darkMode')}>
+            <div className="settings-item" role="button" tabIndex={0} aria-label={`다크 모드 ${settings.darkMode ? '켜짐' : '꺼짐'}`} onClick={() => toggle('darkMode')} onKeyDown={(e) => e.key === 'Enter' && toggle('darkMode')}>
               <div className="settings-item-left">
                 <span className="settings-item-icon">
                   <MoonIcon size={20} color="var(--accent)" />
@@ -185,7 +185,7 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll,
 
       {/* 초기화 확인 다이얼로그 */}
       {showResetConfirm && (
-        <div className="modal-overlay" onClick={(e) => e.target === e.currentTarget && setShowResetConfirm(false)}>
+        <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="진행 초기화 확인" onClick={(e) => e.target === e.currentTarget && setShowResetConfirm(false)}>
           <div className="modal-content">
             <div className="modal-icon">
               <AlertIcon size={56} />
