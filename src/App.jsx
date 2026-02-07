@@ -1,15 +1,18 @@
-import { useState, useCallback, useEffect } from 'react';
+import { useState, useCallback, useEffect, useRef } from 'react';
 import HomeScreen from './components/HomeScreen.jsx';
 import GameScreen from './components/GameScreen.jsx';
 import CollectionGameScreen from './components/CollectionGameScreen.jsx';
 import TutorialScreen from './components/TutorialScreen.jsx';
 import SettingsScreen from './components/SettingsScreen.jsx';
+import StatsScreen from './components/StatsScreen.jsx';
+import { ToastManager } from './components/Toast.jsx';
 import { useGame } from './hooks/useGame.js';
 import { loadAppState, saveAppState, loadCollectionProgress, saveCollectionProgress } from './lib/storage.js';
 import { initAudio } from './lib/sound.js';
-import { calculateStars, TOTAL_LEVELS } from './lib/puzzle.js';
+import { calculateStars, TOTAL_LEVELS, getSizeForLevel } from './lib/puzzle.js';
 import { loadSettings } from './lib/settings.js';
-import { getDailyPuzzle, getTodayStr, loadDailyState, saveDailyState } from './lib/dailyChallenge.js';
+import { getDailyPuzzle, getTodayStr, loadDailyState, saveDailyState, calculateStreak } from './lib/dailyChallenge.js';
+import { checkAchievements, getAchievementById, incrementDarkModeCount } from './lib/achievements.js';
 
 function hasSeenTutorial() {
   try {
@@ -37,7 +40,10 @@ export default function App() {
   const [darkMode, setDarkMode] = useState(() => loadSettings().darkMode);
   const [levelTransition, setLevelTransition] = useState(null); // 'slide-left-in' | null
   const [dailyDate, setDailyDate] = useState(null); // YYYY-MM-DD when playing daily
+  const [toasts, setToasts] = useState([]); // toast queue
   const { state: gameState, startLevel, startDaily, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive, applyZeroLineX } = useGame();
+  // Track whether we already processed completion for current game instance
+  const completionProcessedRef = useRef(false);
 
   // Apply dark mode on initial load
   useEffect(() => {
@@ -85,9 +91,27 @@ export default function App() {
     saveCollectionProgress(collectionProgress);
   }, [collectionProgress]);
 
-  // Handle level completion — update state + award hint
+  // Reset completion processed flag when starting a new game
   useEffect(() => {
-    if (gameState.isComplete && gameState.puzzle) {
+    if (!gameState.isComplete) {
+      completionProcessedRef.current = false;
+    }
+  }, [gameState.isComplete, gameState.level, dailyDate]);
+
+  // Handle level completion — update state + award hint + stats + achievements
+  useEffect(() => {
+    if (gameState.isComplete && gameState.puzzle && !completionProcessedRef.current) {
+      completionProcessedRef.current = true;
+
+      // 다크 모드 완료 카운트 (일일/일반 모두)
+      const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+      if (isDark) {
+        incrementDarkModeCount();
+      }
+
+      // 통계 업데이트
+      updateStats(gameState.elapsedTime, gameState.lives === gameState.maxLives);
+
       // 일일 챌린지 완료 처리
       if (dailyDate) {
         saveDailyState(dailyDate, {
@@ -95,6 +119,25 @@ export default function App() {
           elapsedTime: gameState.elapsedTime,
           completedAt: Date.now(),
         });
+
+        // 성취 체크 (일일 챌린지)
+        const dailyStreak = calculateStreak();
+        const achContext = {
+          completedLevels: appState.completedLevels,
+          bestStars: appState.bestStars,
+          bestTimes: appState.bestTimes,
+          collectionProgress,
+          level: 0,
+          lives: gameState.lives,
+          maxLives: gameState.maxLives || 3,
+          elapsedTime: gameState.elapsedTime,
+          isDark,
+          isDaily: true,
+          puzzleSize: gameState.puzzle.size,
+          dailyStreak,
+        };
+        const newAchievements = checkAchievements(achContext);
+        showAchievementToasts(newAchievements);
         return;
       }
 
@@ -119,10 +162,66 @@ export default function App() {
         const hints = prev.completedLevels.includes(gameState.level)
           ? prev.hints
           : prev.hints + 1;
-        return { ...prev, completedLevels, currentLevel, bestTimes, bestStars, hints };
+
+        const newState = { ...prev, completedLevels, currentLevel, bestTimes, bestStars, hints };
+
+        // 성취 체크 (일반 레벨)
+        const dailyStreak = calculateStreak();
+        const achContext = {
+          completedLevels: newState.completedLevels,
+          bestStars: newState.bestStars,
+          bestTimes: newState.bestTimes,
+          collectionProgress,
+          level: gameState.level,
+          lives: gameState.lives,
+          maxLives: gameState.maxLives || 3,
+          elapsedTime: gameState.elapsedTime,
+          isDark,
+          isDaily: false,
+          puzzleSize: gameState.puzzle.size,
+          dailyStreak,
+        };
+
+        // setTimeout to avoid state update during render
+        setTimeout(() => {
+          const newAchievements = checkAchievements(achContext);
+          showAchievementToasts(newAchievements);
+        }, 100);
+
+        return newState;
       });
     }
-  }, [gameState.isComplete, gameState.level, gameState.elapsedTime, gameState.puzzle, dailyDate]);
+  }, [gameState.isComplete, gameState.level, gameState.elapsedTime, gameState.puzzle, dailyDate, gameState.lives, gameState.maxLives, collectionProgress]);
+
+  // ─── 통계 업데이트 함수 ───
+  const updateStats = useCallback((elapsedTime, isPerfect) => {
+    try {
+      const raw = localStorage.getItem('nonogram_stats');
+      const stats = raw ? JSON.parse(raw) : {};
+      stats.totalPlayTime = (stats.totalPlayTime || 0) + elapsedTime;
+      if (isPerfect) {
+        stats.perfectCount = (stats.perfectCount || 0) + 1;
+      }
+      localStorage.setItem('nonogram_stats', JSON.stringify(stats));
+    } catch { /* ignore */ }
+  }, []);
+
+  // ─── 성취 토스트 표시 ───
+  const showAchievementToasts = useCallback((achievementIds) => {
+    if (!achievementIds || achievementIds.length === 0) return;
+    const newToasts = achievementIds.map(id => {
+      const ach = getAchievementById(id);
+      return {
+        icon: ach ? ach.icon : '🏆',
+        message: ach ? `업적 달성! ${ach.name}` : '업적 달성!',
+      };
+    });
+    setToasts(prev => [...prev, ...newToasts]);
+  }, []);
+
+  const clearToasts = useCallback(() => {
+    setToasts([]);
+  }, []);
 
   const handleStartLevel = useCallback(
     (level) => {
@@ -169,6 +268,10 @@ export default function App() {
 
   const handleOpenSettings = useCallback(() => {
     setScreen('settings');
+  }, []);
+
+  const handleOpenStats = useCallback(() => {
+    setScreen('stats');
   }, []);
 
   const handleResetTutorial = useCallback(() => {
@@ -232,17 +335,40 @@ export default function App() {
     setCollectionProgress((prev) => {
       const key = `${collectionId}-${tileRow}-${tileCol}`;
       if (prev.completedTiles.includes(key)) return prev;
-      return {
+      const newProgress = {
         ...prev,
         completedTiles: [...prev.completedTiles, key],
       };
+
+      // 성취 체크 (컬렉션)
+      setTimeout(() => {
+        const dailyStreak = calculateStreak();
+        const achContext = {
+          completedLevels: appState.completedLevels,
+          bestStars: appState.bestStars,
+          bestTimes: appState.bestTimes,
+          collectionProgress: newProgress,
+          level: 0,
+          lives: 3,
+          maxLives: 3,
+          elapsedTime: 0,
+          isDark: document.documentElement.getAttribute('data-theme') === 'dark',
+          isDaily: false,
+          puzzleSize: 5,
+          dailyStreak,
+        };
+        const newAchievements = checkAchievements(achContext);
+        showAchievementToasts(newAchievements);
+      }, 100);
+
+      return newProgress;
     });
     // 힌트 보상
     setAppState((prev) => ({
       ...prev,
       hints: prev.hints + 1,
     }));
-  }, []);
+  }, [appState, showAchievementToasts]);
 
   // Auto-save daily game progress
   useEffect(() => {
@@ -296,10 +422,25 @@ export default function App() {
   if (screen === 'settings') {
     return (
       <div className="screen-transition fade-in" key="settings">
+        <ToastManager toasts={toasts} onClear={clearToasts} />
         <SettingsScreen
           onGoHome={handleGoHome}
           onResetTutorial={handleResetTutorial}
           onUnlockAll={handleUnlockAll}
+          onOpenStats={handleOpenStats}
+        />
+      </div>
+    );
+  }
+
+  if (screen === 'stats') {
+    return (
+      <div className="screen-transition fade-in" key="stats">
+        <ToastManager toasts={toasts} onClear={clearToasts} />
+        <StatsScreen
+          appState={appState}
+          collectionProgress={collectionProgress}
+          onGoBack={() => setScreen('settings')}
         />
       </div>
     );
@@ -308,6 +449,7 @@ export default function App() {
   if (screen === 'collection-game' && activeCollectionGame) {
     return (
       <div className="screen-transition fade-in" key={`cg-${activeCollectionGame.collectionId}-${activeCollectionGame.tileRow}-${activeCollectionGame.tileCol}`}>
+        <ToastManager toasts={toasts} onClear={clearToasts} />
         <CollectionGameScreen
           collectionId={activeCollectionGame.collectionId}
           tileRow={activeCollectionGame.tileRow}
@@ -332,6 +474,7 @@ export default function App() {
   if (screen === 'game') {
     return (
       <div className={`screen-transition ${levelTransition || 'fade-in'}`} key={`game-${gameState.level}`}>
+        <ToastManager toasts={toasts} onClear={clearToasts} />
         <GameScreen
           gameState={gameState}
           onToggleCell={toggleCell}
@@ -355,6 +498,7 @@ export default function App() {
 
   return (
     <div className="screen-transition fade-in" key="home">
+      <ToastManager toasts={toasts} onClear={clearToasts} />
       <HomeScreen
         appState={appState}
         collectionProgress={collectionProgress}

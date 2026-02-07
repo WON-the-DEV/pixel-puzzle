@@ -4,7 +4,7 @@ import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashI
 
 const DEV_MODE = import.meta.env.DEV;
 
-export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll }) {
+export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll, onOpenStats }) {
   const [settings, setSettings] = useState(loadSettings);
   const [showResetConfirm, setShowResetConfirm] = useState(false);
 
@@ -130,6 +130,19 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll 
               </div>
             </div>
           </div>
+        </div>
+
+        {/* 📊 내 기록 */}
+        <div className="settings-section">
+          <button
+            className="settings-action-btn"
+            onClick={onOpenStats}
+            style={{ fontWeight: 600 }}
+          >
+            <span className="settings-item-icon" style={{ fontSize: 20 }}>📊</span>
+            <span>내 기록 / 업적</span>
+            <span style={{ marginLeft: 'auto', color: 'var(--text-tertiary)', fontSize: 16 }}>›</span>
+          </button>
         </div>
 
         {/* 기타 */}
