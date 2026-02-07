@@ -294,7 +294,7 @@ export default function GameCanvas({
         } else if (cell === 2 || cell === 3) {
           const isAutoX = animatingAutoX.has(key);
           const isMistake = cell === 3;
-          ctx.strokeStyle = isMistake ? COLORS.mistakeBorder : isAutoX ? COLORS.autoXMark : COLORS.xMark;
+          ctx.strokeStyle = isMistake ? COLORS.mistakeBorder : COLORS.xMark;
           ctx.lineWidth = 2;
           ctx.lineCap = 'round';
           const m = cellSize * 0.28;
