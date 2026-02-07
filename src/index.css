@@ -561,6 +561,87 @@ body {
   padding: 12px 16px;
 }
 
+/* ─── 난이도 섹션 (아코디언) ─── */
+.collection-section {
+  margin-bottom: 12px;
+}
+
+.collection-section-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 14px;
+  background: var(--surface);
+  border-radius: var(--radius-lg);
+  cursor: pointer;
+  -webkit-tap-highlight-color: transparent;
+  transition: all 0.2s;
+  margin-bottom: 8px;
+  box-shadow: var(--shadow-sm);
+}
+
+.collection-section-header:active {
+  transform: scale(0.98);
+}
+
+.collection-section-header.collapsed {
+  margin-bottom: 0;
+  opacity: 0.7;
+}
+
+.collection-section-left {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.collection-section-label {
+  font-size: 15px;
+  font-weight: 800;
+  color: var(--text);
+}
+
+.collection-section-desc {
+  font-size: 11px;
+  color: var(--text-tertiary);
+}
+
+.collection-section-right {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.collection-section-badge {
+  font-size: 14px;
+}
+
+.collection-section-count {
+  font-size: 13px;
+  font-weight: 700;
+  min-width: 18px;
+  text-align: center;
+}
+
+.collection-section-chevron {
+  font-size: 14px;
+  color: var(--text-tertiary);
+  transition: transform 0.2s;
+}
+
+.collection-section-chevron.collapsed {
+  transform: rotate(-90deg);
+}
+
+.collection-section-content {
+  animation: sectionExpand 0.2s ease both;
+}
+
+@keyframes sectionExpand {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
 /* Compact grid layout */
 .collection-grid-compact {
   display: flex;
