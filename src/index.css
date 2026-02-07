@@ -1949,7 +1949,7 @@ body {
 }
 
 .ctrl-preview-actions.gameboy-style .ctrl-action.fill {
-  margin-top: 18px;
+  margin-top: 30px;
 }
 
 .ctrl-action {
@@ -2705,7 +2705,7 @@ body {
 
 /* Game Boy style: Fill(B) left-lower, X(A) right-upper */
 .action-fill {
-  margin-top: 24px;
+  margin-top: 40px;
 }
 
 .action-btn {
