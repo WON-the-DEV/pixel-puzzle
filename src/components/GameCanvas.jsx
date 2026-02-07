@@ -349,8 +349,7 @@ export default function GameCanvas({
       ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
     }
 
-    // (crosshair indicator removed — was distracting)
-    }
+    // (crosshair indicator removed)
   }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
   // Batched render via requestAnimationFrame — avoids multiple redraws per frame during fast drag

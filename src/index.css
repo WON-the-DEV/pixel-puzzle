@@ -2626,7 +2626,7 @@ body {
   justify-content: space-between;
   align-items: center;
   flex: 1;
-  padding: 10px 4px 6px;
+  padding: 10px 8px 6px 16px;
   gap: 0;
 }
 
@@ -2681,33 +2681,39 @@ body {
 /* Right: Action buttons — responsive sizing */
 .controller-right {
   display: flex;
-  flex-direction: column;
-  gap: 8px;
+  flex-direction: row;
+  gap: 10px;
   align-items: center;
   flex: 0 1 auto;
+  padding-right: 4px;
+}
+
+/* Game Boy style: Fill(B) left-lower, X(A) right-upper */
+.action-fill {
+  margin-top: 16px;
 }
 
 .action-btn {
-  width: min(80px, calc(50vw - 40px));
-  height: min(50px, calc((50vw - 40px) / 2));
-  min-width: 64px;
-  min-height: 40px;
-  border-radius: 12px;
+  width: 56px;
+  height: 56px;
+  border-radius: 50%;
   border: 2px solid var(--border);
   background: var(--bg);
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
-  gap: 4px;
+  gap: 2px;
   cursor: pointer;
   transition: all 0.1s;
   -webkit-tap-highlight-color: transparent;
   touch-action: manipulation;
+  box-shadow: var(--shadow-sm);
 }
 
 .action-btn-label {
-  font-size: 13px;
-  font-weight: 600;
+  font-size: 10px;
+  font-weight: 700;
   letter-spacing: -0.3px;
 }
 
