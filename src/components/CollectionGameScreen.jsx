@@ -771,7 +771,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
     playFill();
     hapticFill();
     
-    if (current === 2) return; // Already X-marked, skip
+    if (current === 2 || current === 3) return; // Already X-marked or mistake, skip
     if (current === 1) {
       // Already filled — unfill via toggle
       if (state.mode !== 'fill') dispatch({ type: 'TOGGLE_MODE' });
@@ -791,7 +791,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
     playMark();
     hapticFill();
     
-    if (current === 1) return; // Already filled, skip
+    if (current === 1 || current === 3) return; // Already filled or mistake, skip
     if (state.mode !== 'mark') dispatch({ type: 'TOGGLE_MODE' });
     dispatch({ type: 'TOGGLE_CELL', row: cursorRow, col: cursorCol });
   }, [cursorRow, cursorCol, state.isComplete, state.isGameOver, state.puzzle, state.mode, state.playerGrid]);
@@ -801,20 +801,25 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
   const handleControllerMove = useCallback((direction, holdAction) => {
     if (!state.puzzle) return;
     
-    let newRow = cursorRow;
-    let newCol = cursorCol;
-    
-    if (direction === 'up') newRow = Math.max(0, cursorRow - 1);
-    if (direction === 'down') newRow = Math.min(state.puzzle.size - 1, cursorRow + 1);
-    if (direction === 'left') newCol = Math.max(0, cursorCol - 1);
-    if (direction === 'right') newCol = Math.min(state.puzzle.size - 1, cursorCol + 1);
-    
-    setCursorRow(newRow);
-    setCursorCol(newCol);
+    // Use functional updates to avoid stale cursor closure after state changes (e.g., mistake)
+    setCursorRow(prev => {
+      const next = direction === 'up' ? Math.max(0, prev - 1) :
+                   direction === 'down' ? Math.min(state.puzzle.size - 1, prev + 1) : prev;
+      return next;
+    });
+    setCursorCol(prev => {
+      const next = direction === 'left' ? Math.max(0, prev - 1) :
+                   direction === 'right' ? Math.min(state.puzzle.size - 1, prev + 1) : prev;
+      return next;
+    });
     hapticFill();
     
     // If holding fill/mark button while moving, auto-apply action
     if (holdAction && !state.isComplete && !state.isGameOver) {
+      const newRow = direction === 'up' ? Math.max(0, cursorRow - 1) :
+                     direction === 'down' ? Math.min(state.puzzle.size - 1, cursorRow + 1) : cursorRow;
+      const newCol = direction === 'left' ? Math.max(0, cursorCol - 1) :
+                     direction === 'right' ? Math.min(state.puzzle.size - 1, cursorCol + 1) : cursorCol;
       const current = state.playerGrid[newRow]?.[newCol];
       if (current === undefined) return;
       

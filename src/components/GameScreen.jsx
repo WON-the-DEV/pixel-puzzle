@@ -199,8 +199,8 @@ export default function GameScreen({
       // Need fill mode to unfill
       if (mode !== 'fill') onToggleMode();
       onToggleCell(cursorRow, cursorCol);
-    } else if (current === 2) {
-      // Already X-marked, skip
+    } else if (current === 2 || current === 3) {
+      // Already X-marked or mistake, skip
       return;
     } else {
       // Empty cell - fill it directly using fill mode
@@ -217,8 +217,8 @@ export default function GameScreen({
     playMark();
     hapticFill();
     
-    if (current === 1) {
-      // Already filled, skip
+    if (current === 1 || current === 3) {
+      // Already filled or mistake, skip
       return;
     } else {
       // Toggle X mark
@@ -233,32 +233,37 @@ export default function GameScreen({
   const handleControllerMove = useCallback((direction, holdAction) => {
     if (!puzzle) return;
     
-    let newRow = cursorRow;
-    let newCol = cursorCol;
-    
-    if (direction === 'up') newRow = Math.max(0, cursorRow - 1);
-    if (direction === 'down') newRow = Math.min(puzzle.size - 1, cursorRow + 1);
-    if (direction === 'left') newCol = Math.max(0, cursorCol - 1);
-    if (direction === 'right') newCol = Math.min(puzzle.size - 1, cursorCol + 1);
-    
-    setCursorRow(newRow);
-    setCursorCol(newCol);
+    // Use functional updates to avoid stale cursor closure after state changes (e.g., mistake)
+    setCursorRow(prev => {
+      const next = direction === 'up' ? Math.max(0, prev - 1) :
+                   direction === 'down' ? Math.min(puzzle.size - 1, prev + 1) : prev;
+      return next;
+    });
+    setCursorCol(prev => {
+      const next = direction === 'left' ? Math.max(0, prev - 1) :
+                   direction === 'right' ? Math.min(puzzle.size - 1, prev + 1) : prev;
+      return next;
+    });
     hapticFill();
     
     // If holding fill/mark button while moving, auto-apply action
+    // We need current cursor position — use refs or compute from direction
     if (holdAction && !isComplete && !isGameOver) {
+      // Compute the new position from current state  
+      const newRow = direction === 'up' ? Math.max(0, cursorRow - 1) :
+                     direction === 'down' ? Math.min(puzzle.size - 1, cursorRow + 1) : cursorRow;
+      const newCol = direction === 'left' ? Math.max(0, cursorCol - 1) :
+                     direction === 'right' ? Math.min(puzzle.size - 1, cursorCol + 1) : cursorCol;
       const current = playerGrid[newRow]?.[newCol];
       if (current === undefined) return;
       
       if (holdAction === 'fill') {
         if (current === 0) {
-          // Empty cell - fill it using onFillCell directly (bypasses mode toggle issues)
           playFill();
           onFillCell(newRow, newCol, 1);
         }
       } else if (holdAction === 'mark') {
         if (current === 0) {
-          // Empty cell - mark it using onFillCell directly
           playMark();
           onFillCell(newRow, newCol, 2);
         }
