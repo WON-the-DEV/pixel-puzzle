@@ -64,6 +64,7 @@ export default function GameCanvas({
   const autoXAnimRef = useRef(new Set());
   const mistakeFlashRef = useRef(new Set());
   const touchOffsetActiveRef = useRef(false); // true when touch offset crosshair is visible
+  const rafRef = useRef(null); // requestAnimationFrame id for batched rendering
 
   // Mistake flash animation
   useEffect(() => {
@@ -369,8 +370,18 @@ export default function GameCanvas({
     }
   }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
+  // Batched render via requestAnimationFrame — avoids multiple redraws per frame during fast drag
+  const scheduleRender = useCallback(() => {
+    if (rafRef.current) return; // already scheduled
+    rafRef.current = requestAnimationFrame(() => {
+      rafRef.current = null;
+      render();
+    });
+  }, [render]);
+
   useEffect(() => {
     render();
+    return () => { if (rafRef.current) cancelAnimationFrame(rafRef.current); };
   }, [render]);
 
   useEffect(() => {
@@ -440,9 +451,9 @@ export default function GameCanvas({
       touchOffsetActiveRef.current = useOffset;
       highlightRef.current = { row: cell.row, col: cell.col };
       lastTouchRef.current = { row: cell.row, col: cell.col };
-      render();
+      scheduleRender();
     },
-    [getCellAt, isComplete, render, controllerMode]
+    [getCellAt, isComplete, scheduleRender, controllerMode]
   );
 
   const handlePointerMove = useCallback(
@@ -521,9 +532,9 @@ export default function GameCanvas({
         }
       }
 
-      render();
+      scheduleRender();
     },
-    [getCellAt, onFillCell, onToggleCell, render, isComplete, playerGrid, mode, controllerMode]
+    [getCellAt, onFillCell, onToggleCell, scheduleRender, isComplete, playerGrid, mode, controllerMode]
   );
 
   const handlePointerUp = useCallback(
@@ -556,9 +567,9 @@ export default function GameCanvas({
 
       touchOffsetActiveRef.current = false;
       highlightRef.current = { row: -1, col: -1 };
-      render();
+      scheduleRender();
     },
-    [onEndDrag, onToggleCell, render, isComplete, controllerMode]
+    [onEndDrag, onToggleCell, scheduleRender, isComplete, controllerMode]
   );
 
   // Register native touch listeners (non-passive) to fix mobile single-tap

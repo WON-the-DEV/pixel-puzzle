@@ -81,6 +81,7 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
         palette: puzzle.palette,
         isDaily,
         streak: streak > 0 ? streak : undefined,
+        dateStr: puzzle.dateStr,
       });
       setShareState(result === 'shared' ? 'shared' : result === 'downloaded' ? 'downloaded' : 'idle');
       // Reset after 2s

@@ -16,7 +16,7 @@
  * @param {number} [opts.streak] - 연속 클리어 일수
  * @returns {Promise<Blob>} PNG Blob
  */
-export async function generateShareImage({ solution, size, puzzleName, time, stars, palette, isDaily, streak }) {
+export async function generateShareImage({ solution, size, puzzleName, time, stars, palette, isDaily, streak, dateStr }) {
   const W = 1080;
   const H = 1080;
   const canvas = document.createElement('canvas');
@@ -98,7 +98,8 @@ export async function generateShareImage({ solution, size, puzzleName, time, sta
   // 퍼즐 이름
   ctx.fillStyle = 'rgba(255,255,255,0.95)';
   ctx.font = 'bold 40px -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif';
-  ctx.fillText(puzzleName || 'Puzzle', W / 2, bottomY);
+  const displayName = isDaily && dateStr ? `📅 ${dateStr}` : (puzzleName || 'Puzzle');
+  ctx.fillText(displayName, W / 2, bottomY);
 
   // 별점
   if (stars > 0) {
@@ -139,7 +140,7 @@ export async function sharePuzzleResult(opts) {
   const file = new File([blob], 'pixel-puzzle-result.png', { type: 'image/png' });
 
   const shareText = opts.isDaily
-    ? `📅 오늘의 퍼즐 클리어! ${'⭐'.repeat(opts.stars || 0)} (${formatTime(opts.time)})${opts.streak ? `\n🔥 ${opts.streak}일 연속!` : ''}\n\nhttps://won-the-dev.github.io/pixel-puzzle/`
+    ? `📅 오늘의 퍼즐${opts.dateStr ? ` (${opts.dateStr})` : ''} 클리어! ${'⭐'.repeat(opts.stars || 0)} (${formatTime(opts.time)})${opts.streak ? `\n🔥 ${opts.streak}일 연속!` : ''}\n\nhttps://won-the-dev.github.io/pixel-puzzle/`
     : `🧩 ${opts.puzzleName || 'Puzzle'} 클리어! ${'⭐'.repeat(opts.stars || 0)} (${formatTime(opts.time)})\n\nhttps://won-the-dev.github.io/pixel-puzzle/`;
 
   // Web Share API (모바일)
