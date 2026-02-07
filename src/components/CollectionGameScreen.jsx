@@ -883,25 +883,29 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
         />
       </main>
 
+      {/* Controller utility buttons — between canvas and controller pad */}
+      {controllerMode && (
+        <div className="controller-utility-bar">
+          <div style={{flex:1}} />
+          <button className="control-btn-sm" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
+            <LightbulbIcon size={16} color="var(--text)" />
+            <span>힌트</span>
+            {hints > 0 && <span className="count-sm">{hints}</span>}
+          </button>
+          <button
+            className="control-btn-sm"
+            onClick={() => setControllerMode(false)}
+            aria-label="터치 모드로 전환"
+          >
+            <TouchIcon size={16} color="var(--text)" />
+            <span>터치</span>
+          </button>
+        </div>
+      )}
+
       {/* Controls */}
       {controllerMode ? (
         <footer className="controls controller-controls">
-          <div className="controller-utility-bar">
-            <div style={{flex:1}} />
-            <button className="control-btn-sm" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
-              <LightbulbIcon size={16} color="var(--text)" />
-              <span>힌트</span>
-              {hints > 0 && <span className="count-sm">{hints}</span>}
-            </button>
-            <button
-              className="control-btn-sm"
-              onClick={() => setControllerMode(false)}
-              aria-label="터치 모드로 전환"
-            >
-              <TouchIcon size={16} color="var(--text)" />
-              <span>터치</span>
-            </button>
-          </div>
           <ControllerPad
             onMove={handleControllerMove}
             onFill={handleControllerFill}

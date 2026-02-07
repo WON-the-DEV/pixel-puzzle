@@ -333,26 +333,29 @@ export default function GameScreen({
         />
       </main>
 
+      {/* Controller utility buttons — between canvas and controller pad */}
+      {controllerMode && (
+        <div className="controller-utility-bar">
+          <div style={{flex:1}} />
+          <button className="control-btn-sm" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver}>
+            <LightbulbIcon size={16} color="var(--text)" />
+            <span>힌트</span>
+            {hints > 0 && <span className="count-sm">{hints}</span>}
+          </button>
+          <button
+            className="control-btn-sm"
+            onClick={() => setControllerMode(false)}
+            aria-label="터치 모드로 전환"
+          >
+            <TouchIcon size={16} color="var(--text)" />
+            <span>터치</span>
+          </button>
+        </div>
+      )}
+
       {/* Controls */}
       {controllerMode ? (
         <footer className="controls controller-controls">
-          {/* 유틸리티 바: 힌트 + 터치 전환 (오른쪽 정렬) */}
-          <div className="controller-utility-bar">
-            <div style={{flex:1}} />
-            <button className="control-btn-sm" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver}>
-              <LightbulbIcon size={16} color="var(--text)" />
-              <span>힌트</span>
-              {hints > 0 && <span className="count-sm">{hints}</span>}
-            </button>
-            <button
-              className="control-btn-sm"
-              onClick={() => setControllerMode(false)}
-              aria-label="터치 모드로 전환"
-            >
-              <TouchIcon size={16} color="var(--text)" />
-              <span>터치</span>
-            </button>
-          </div>
           <ControllerPad
             onMove={handleControllerMove}
             onFill={handleControllerFill}
