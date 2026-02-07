@@ -2707,6 +2707,9 @@ body {
 .action-fill {
   margin-top: 40px;
 }
+.action-mark {
+  margin-bottom: 16px;
+}
 
 .action-btn {
   width: 64px;
