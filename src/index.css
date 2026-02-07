@@ -2571,6 +2571,7 @@ body {
 /* Bug 3: controller controls — more breathing room */
 .controller-controls {
   flex-direction: column;
+  align-items: stretch;
   padding: 4px 6px calc(6px + var(--safe-bottom));
   background: var(--surface-raised, var(--surface));
   border-top: 1px solid var(--border-light);
@@ -2625,8 +2626,8 @@ body {
   justify-content: space-between;
   align-items: center;
   flex: 1;
-  padding: 8px 12px 4px;
-  gap: 16px;
+  padding: 10px 4px 6px;
+  gap: 0;
 }
 
 /* Left: D-pad (3x3 grid) — responsive button sizes */
