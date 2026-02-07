@@ -170,10 +170,8 @@ export default function App() {
         if (!prevStars || stars > prevStars) {
           bestStars[gameState.level] = stars;
         }
-        // 힌트 보상: 레벨 완료 시 +1 (첫 완료만)
-        const hints = prev.completedLevels.includes(gameState.level)
-          ? prev.hints
-          : prev.hints + 1;
+        // 힌트 보상 제거 — 힌트는 광고/인앱 구매로만 획득
+        const hints = prev.hints;
 
         const newState = { ...prev, completedLevels, currentLevel, bestTimes, bestStars, hints };
 
@@ -388,11 +386,7 @@ export default function App() {
 
       return newProgress;
     });
-    // 힌트 보상
-    setAppState((prev) => ({
-      ...prev,
-      hints: prev.hints + 1,
-    }));
+    // 힌트 보상 제거 — 힌트는 광고/인앱 구매로만 획득
   }, [showAchievementToasts]);
 
   // Auto-save daily game progress

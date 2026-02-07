@@ -887,6 +887,7 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
       {controllerMode ? (
         <footer className="controls controller-controls">
           <div className="controller-utility-bar">
+            <div style={{flex:1}} />
             <button className="control-btn-sm" onClick={handleHint} disabled={hints <= 0 || state.isComplete || state.isGameOver}>
               <LightbulbIcon size={16} color="var(--text)" />
               <span>힌트</span>
@@ -986,10 +987,6 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
                 <span className="result-stat-label">클리어 시간</span>
               </div>
             </div>
-            <p className="hint-earned-text">
-              <LightbulbIcon size={16} color="var(--success)" />
-              힌트 +1 획득!
-            </p>
             <div className="modal-buttons">
               <button className="primary-btn" onClick={onGoHome}>컬렉션으로 →</button>
             </div>

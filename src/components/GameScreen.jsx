@@ -336,8 +336,9 @@ export default function GameScreen({
       {/* Controls */}
       {controllerMode ? (
         <footer className="controls controller-controls">
-          {/* Bug 1: Hint + Touch buttons moved to a utility bar above the controller */}
+          {/* 유틸리티 바: 힌트 + 터치 전환 (오른쪽 정렬) */}
           <div className="controller-utility-bar">
+            <div style={{flex:1}} />
             <button className="control-btn-sm" onClick={handleUseHint} disabled={hints <= 0 || isComplete || isGameOver}>
               <LightbulbIcon size={16} color="var(--text)" />
               <span>힌트</span>

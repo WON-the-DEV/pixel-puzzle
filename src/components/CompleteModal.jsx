@@ -177,11 +177,6 @@ export default function CompleteModal({ level, time, puzzleName, stars = 0, onHo
           </div>
         </div>
 
-        <p className="hint-earned-text">
-          <LightbulbIcon size={16} color="var(--success)" />
-          힌트 +1 획득!
-        </p>
-
         <div className="modal-buttons">
           {isDaily ? (
             <button className="primary-btn" onClick={onHome} aria-label="홈 화면으로 돌아가기" style={{ width: '100%' }}>

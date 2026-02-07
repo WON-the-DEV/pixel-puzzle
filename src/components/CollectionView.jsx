@@ -27,7 +27,7 @@ function InteractiveBigPicture({ collection, completedTiles, onStartTile }) {
     if (!canvas) return;
 
     const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
-    const maxWidth = Math.min(window.innerWidth - 48, 400);
+    const maxWidth = Math.min(window.innerWidth - 80, 360);
     const totalCols = bigPicture[0].length;
     const totalRows = bigPicture.length;
     const cellSize = Math.floor(maxWidth / Math.max(totalRows, totalCols));
