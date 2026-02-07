@@ -62,27 +62,12 @@ export default function GameCanvas({
   const lastTouchRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
-  const mistakeFlashRef = useRef(new Set());
+  // mistakeFlashRef removed — wrong cells use permanent red X (cell value 3)
   const touchOffsetActiveRef = useRef(false); // true when touch offset crosshair is visible
   const rafRef = useRef(null); // requestAnimationFrame id for batched rendering
   const renderRef = useRef(null); // always points to latest render function
 
-  // Mistake flash animation
-  useEffect(() => {
-    if (mistakeFlashCells && mistakeFlashCells.length > 0) {
-      mistakeFlashRef.current = new Set(mistakeFlashCells.map(c => `${c.row}-${c.col}`));
-      const timer = setTimeout(() => {
-        mistakeFlashRef.current = new Set();
-        // Re-render to clear flash — use renderRef to always call latest render
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-          rafRef.current = null;
-          if (renderRef.current) renderRef.current();
-        });
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [mistakeFlashCells]);
+  // Mistake flash removed — wrong cells are permanently red X (cell value 3)
 
   useEffect(() => {
     if (autoXCells.length > 0) {
@@ -278,7 +263,6 @@ export default function GameCanvas({
 
     // ── Cells ──
     const animatingAutoX = autoXAnimRef.current;
-    const flashingMistakes = mistakeFlashRef.current;
 
     for (let i = 0; i < size; i++) {
       for (let j = 0; j < size; j++) {
@@ -286,15 +270,6 @@ export default function GameCanvas({
         const x = offsetX + j * cellSize;
         const y = offsetY + i * cellSize;
         const key = `${i}-${j}`;
-
-        // Mistake flash effect (red background)
-        if (flashingMistakes.has(key)) {
-          ctx.fillStyle = COLORS.mistakeBg;
-          ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
-          ctx.strokeStyle = COLORS.mistakeBorder;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
-        }
 
         if (cell === 1) {
           ctx.fillStyle = COLORS.cellFilled;
@@ -319,9 +294,8 @@ export default function GameCanvas({
         } else if (cell === 2 || cell === 3) {
           const isAutoX = animatingAutoX.has(key);
           const isMistake = cell === 3;
-          const isMistakeFlash = flashingMistakes.has(key);
-          ctx.strokeStyle = (isMistake || isMistakeFlash) ? COLORS.mistakeBorder : isAutoX ? COLORS.autoXMark : COLORS.xMark;
-          ctx.lineWidth = isMistakeFlash ? 2.5 : 2;
+          ctx.strokeStyle = isMistake ? COLORS.mistakeBorder : isAutoX ? COLORS.autoXMark : COLORS.xMark;
+          ctx.lineWidth = 2;
           ctx.lineCap = 'round';
           const m = cellSize * 0.28;
           ctx.beginPath();
@@ -351,7 +325,7 @@ export default function GameCanvas({
     }
 
     // (crosshair indicator removed)
-  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
+  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
   // Keep renderRef always pointing to latest render function
   renderRef.current = render;
