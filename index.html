@@ -19,7 +19,17 @@
     <title>노노그램 - 픽셀 퍼즐</title>
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#6c5ce7 0%,#a855f7 100%);animation:splashFade 0.4s ease-out 0.8s forwards;opacity:1;">
+        <div style="font-size:36px;font-weight:800;color:white;letter-spacing:-0.5px;">🧩 노노그램</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:6px;letter-spacing:2px;">PIXEL PUZZLE</div>
+      </div>
+    </div>
+    <style>
+      @keyframes splashFade {
+        to { opacity: 0; pointer-events: none; }
+      }
+    </style>
     <script type="module" src="/src/main.jsx"></script>
     <script>
       if ('serviceWorker' in navigator) {

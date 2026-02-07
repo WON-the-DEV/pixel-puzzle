@@ -274,52 +274,107 @@ body {
   background: var(--accent-glow);
 }
 
-/* Hint modal button */
-.hint-modal-btn {
+/* Hint modal — redesigned */
+.hint-modal-redesign {
+  padding: 24px 20px 20px;
+}
+
+.hint-modal-header {
+  text-align: center;
+  margin-bottom: 20px;
+}
+
+.hint-modal-icon-large {
+  font-size: 40px;
+  margin-bottom: 8px;
+}
+
+.hint-modal-balance {
+  font-size: 14px;
+  color: var(--text-secondary);
+  margin-top: 4px;
+}
+
+.hint-modal-balance strong {
+  color: var(--accent);
+  font-size: 18px;
+}
+
+.hint-modal-cards {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  margin-bottom: 8px;
+}
+
+.hint-card {
   display: flex;
   align-items: center;
-  gap: 10px;
-  padding: 14px 16px;
+  gap: 14px;
+  padding: 16px;
   background: var(--bg);
-  border: 1px solid var(--border-light);
-  border-radius: var(--radius-md);
+  border: 1.5px solid var(--border-light);
+  border-radius: var(--radius-lg);
   cursor: pointer;
   transition: all 0.15s;
-  min-height: 48px;
   width: 100%;
 }
 
-.hint-modal-btn:active {
+.hint-card:active:not(.disabled) {
   transform: scale(0.97);
-  background: var(--border-light);
+  border-color: var(--accent);
+  background: var(--accent-light);
 }
 
-.hint-modal-btn-icon {
+.hint-card.disabled {
+  opacity: 0.5;
+  cursor: not-allowed;
+}
+
+.hint-card-icon {
   display: flex;
   align-items: center;
   justify-content: center;
-  width: 36px;
-  height: 36px;
-  border-radius: var(--radius-sm);
+  width: 48px;
+  height: 48px;
+  border-radius: var(--radius-md);
   background: var(--accent-light);
   flex-shrink: 0;
 }
 
-.hint-modal-btn-text {
-  font-size: 15px;
-  font-weight: 600;
-  color: var(--text);
+.hint-card-info {
   flex: 1;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
   text-align: left;
 }
 
-.hint-modal-btn-reward {
-  font-size: 14px;
+.hint-card-title {
+  font-size: 15px;
   font-weight: 700;
+  color: var(--text);
+}
+
+.hint-card-price {
+  font-size: 13px;
+  color: var(--text-secondary);
+}
+
+.hint-card-limit {
+  font-size: 11px;
+  color: var(--text-tertiary);
+  margin-top: 2px;
+}
+
+.hint-card-reward {
+  font-size: 18px;
+  font-weight: 800;
   color: var(--accent);
   background: var(--accent-light);
-  padding: 4px 12px;
-  border-radius: var(--radius-sm);
+  padding: 6px 14px;
+  border-radius: var(--radius-md);
+  flex-shrink: 0;
 }
 
 /* Home body */

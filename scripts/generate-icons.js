@@ -1,7 +1,7 @@
 /**
  * PWA 아이콘 생성 스크립트
  * Node.js Canvas 없이 직접 PNG 바이너리 생성
- * 보라색 배경에 흰색 5x5 그리드 패턴
+ * 보라색 그라데이션 배경에 5x5 노노그램 그리드
  */
 import fs from 'fs';
 import path from 'path';
@@ -11,7 +11,6 @@ const __dirname = path.dirname(fileURLToPath(import.meta.url));
 
 // 간단한 PNG 생성 (비압축)
 function createPNG(width, height, pixels) {
-  // CRC32 테이블
   const crcTable = new Uint32Array(256);
   for (let n = 0; n < 256; n++) {
     let c = n;
@@ -38,10 +37,9 @@ function createPNG(width, height, pixels) {
     return (b << 16) | a;
   }
 
-  // Raw image data (filter byte + RGBA for each row)
   const rawData = [];
   for (let y = 0; y < height; y++) {
-    rawData.push(0); // filter: none
+    rawData.push(0);
     for (let x = 0; x < width; x++) {
       const idx = (y * width + x) * 4;
       rawData.push(pixels[idx], pixels[idx + 1], pixels[idx + 2], pixels[idx + 3]);
@@ -49,7 +47,6 @@ function createPNG(width, height, pixels) {
   }
   const rawBuf = Buffer.from(rawData);
 
-  // Deflate: store blocks (no compression)
   const deflateBlocks = [];
   const BLOCK_SIZE = 65535;
   for (let i = 0; i < rawBuf.length; i += BLOCK_SIZE) {
@@ -57,8 +54,7 @@ function createPNG(width, height, pixels) {
     const isLast = end === rawBuf.length;
     const blockData = rawBuf.subarray(i, end);
     const blockLen = blockData.length;
-
-    deflateBlocks.push(isLast ? 1 : 0); // BFINAL
+    deflateBlocks.push(isLast ? 1 : 0);
     deflateBlocks.push(blockLen & 0xff, (blockLen >> 8) & 0xff);
     deflateBlocks.push(~blockLen & 0xff, (~blockLen >> 8) & 0xff);
     for (let j = 0; j < blockData.length; j++) {
@@ -67,11 +63,9 @@ function createPNG(width, height, pixels) {
   }
 
   const adler = adler32(rawBuf);
-
-  // zlib wrapper: CMF + FLG + deflate + adler32
   const zlibData = Buffer.alloc(2 + deflateBlocks.length + 4);
-  zlibData[0] = 0x78; // CMF
-  zlibData[1] = 0x01; // FLG
+  zlibData[0] = 0x78;
+  zlibData[1] = 0x01;
   Buffer.from(deflateBlocks).copy(zlibData, 2);
   const adlerOffset = 2 + deflateBlocks.length;
   zlibData[adlerOffset] = (adler >> 24) & 0xff;
@@ -79,7 +73,6 @@ function createPNG(width, height, pixels) {
   zlibData[adlerOffset + 2] = (adler >> 8) & 0xff;
   zlibData[adlerOffset + 3] = adler & 0xff;
 
-  // Build PNG
   const signature = Buffer.from([137, 80, 78, 71, 13, 10, 26, 10]);
 
   function makeChunk(type, data) {
@@ -93,15 +86,14 @@ function createPNG(width, height, pixels) {
     return Buffer.concat([len, combined, crcBuf]);
   }
 
-  // IHDR
   const ihdr = Buffer.alloc(13);
   ihdr.writeUInt32BE(width, 0);
   ihdr.writeUInt32BE(height, 4);
-  ihdr[8] = 8;  // bit depth
-  ihdr[9] = 6;  // color type: RGBA
-  ihdr[10] = 0; // compression
-  ihdr[11] = 0; // filter
-  ihdr[12] = 0; // interlace
+  ihdr[8] = 8;
+  ihdr[9] = 6;
+  ihdr[10] = 0;
+  ihdr[11] = 0;
+  ihdr[12] = 0;
 
   return Buffer.concat([
     signature,
@@ -111,23 +103,34 @@ function createPNG(width, height, pixels) {
   ]);
 }
 
+// 색상 보간
+function lerp(a, b, t) {
+  return Math.round(a + (b - a) * t);
+}
+
 function generateIcon(size) {
   const pixels = new Uint8Array(size * size * 4);
 
-  // 보라색 배경 (#6c5ce7)
-  const bgR = 108, bgG = 92, bgB = 231;
-  for (let i = 0; i < size * size; i++) {
-    pixels[i * 4] = bgR;
-    pixels[i * 4 + 1] = bgG;
-    pixels[i * 4 + 2] = bgB;
-    pixels[i * 4 + 3] = 255;
-  }
+  // 보라색 그라데이션 배경 (좌상 → 우하)
+  // #6c5ce7 → #a855f7 → #7c3aed
+  const c1 = { r: 88, g: 72, b: 214 };   // 좌상 (더 진한 보라)
+  const c2 = { r: 168, g: 85, b: 247 };   // 우하 (밝은 보라)
 
-  // 둥근 모서리 (알파 0)
-  const cornerRadius = Math.floor(size * 0.18);
   for (let y = 0; y < size; y++) {
     for (let x = 0; x < size; x++) {
-      // 네 모서리 확인
+      const t = (x / size + y / size) / 2; // diagonal gradient
+      const idx = (y * size + x) * 4;
+      pixels[idx] = lerp(c1.r, c2.r, t);
+      pixels[idx + 1] = lerp(c1.g, c2.g, t);
+      pixels[idx + 2] = lerp(c1.b, c2.b, t);
+      pixels[idx + 3] = 255;
+    }
+  }
+
+  // 둥근 모서리
+  const cornerRadius = Math.floor(size * 0.22);
+  for (let y = 0; y < size; y++) {
+    for (let x = 0; x < size; x++) {
       let cx, cy;
       if (x < cornerRadius && y < cornerRadius) {
         cx = cornerRadius; cy = cornerRadius;
@@ -143,41 +146,50 @@ function generateIcon(size) {
       const dist = Math.sqrt((x - cx) ** 2 + (y - cy) ** 2);
       if (dist > cornerRadius) {
         const idx = (y * size + x) * 4;
-        pixels[idx + 3] = 0; // transparent
+        pixels[idx + 3] = 0;
+      } else if (dist > cornerRadius - 1.5) {
+        // Anti-aliasing edge
+        const idx = (y * size + x) * 4;
+        pixels[idx + 3] = Math.round(255 * (cornerRadius - dist) / 1.5);
       }
     }
   }
 
-  // 5x5 그리드 (흰색)
-  const padding = Math.floor(size * 0.2);
+  // 5x5 노노그램 그리드
+  const padding = Math.floor(size * 0.18);
   const gridArea = size - padding * 2;
   const cellSize = Math.floor(gridArea / 5);
-  const gap = Math.max(1, Math.floor(size * 0.02));
+  const gap = Math.max(2, Math.floor(size * 0.025));
   const offsetX = Math.floor((size - cellSize * 5) / 2);
   const offsetY = Math.floor((size - cellSize * 5) / 2);
 
-  // 노노그램 패턴 (5x5) — 하트 모양
+  // 패턴: 비대칭 노노그램 느낌 (더 아이코닉한 모양)
   const pattern = [
-    [0, 1, 0, 1, 0],
-    [1, 1, 1, 1, 1],
-    [1, 1, 1, 1, 1],
+    [1, 0, 1, 1, 0],
+    [1, 1, 0, 1, 1],
     [0, 1, 1, 1, 0],
-    [0, 0, 1, 0, 0],
+    [1, 1, 0, 1, 1],
+    [0, 1, 1, 0, 1],
   ];
 
   for (let gr = 0; gr < 5; gr++) {
     for (let gc = 0; gc < 5; gc++) {
-      if (!pattern[gr][gc]) continue;
-
       const x0 = offsetX + gc * cellSize + gap;
       const y0 = offsetY + gr * cellSize + gap;
       const w = cellSize - gap * 2;
       const h = cellSize - gap * 2;
-      const r = Math.max(1, Math.floor(w * 0.15));
+      const r = Math.max(2, Math.floor(w * 0.12));
+
+      const isFilled = pattern[gr][gc] === 1;
+      // 채워진 셀: 흰색, 빈 셀: 반투명 흰색 테두리만
+      const fillR = isFilled ? 255 : 0;
+      const fillG = isFilled ? 255 : 0;
+      const fillB = isFilled ? 255 : 0;
+      const fillA = isFilled ? 240 : 0;
+      const borderA = isFilled ? 0 : 60; // 빈 셀만 테두리
 
       for (let y = y0; y < y0 + h && y < size; y++) {
         for (let x = x0; x < x0 + w && x < size; x++) {
-          // 셀 둥근 모서리
           let inside = true;
           if (x < x0 + r && y < y0 + r) {
             inside = Math.sqrt((x - x0 - r) ** 2 + (y - y0 - r) ** 2) <= r;
@@ -191,10 +203,24 @@ function generateIcon(size) {
 
           if (inside) {
             const idx = (y * size + x) * 4;
-            pixels[idx] = 255;
-            pixels[idx + 1] = 255;
-            pixels[idx + 2] = 255;
-            pixels[idx + 3] = 255;
+            if (isFilled) {
+              // 흰색 채움 (약간의 alpha blending)
+              pixels[idx] = fillR;
+              pixels[idx + 1] = fillG;
+              pixels[idx + 2] = fillB;
+              pixels[idx + 3] = fillA;
+            } else {
+              // 빈 셀: 테두리만 (가장자리 2px)
+              const isBorder = (x - x0 < 2 || x >= x0 + w - 2 || y - y0 < 2 || y >= y0 + h - 2);
+              if (isBorder) {
+                const bgIdx = idx;
+                // Alpha blend white border over gradient
+                const alpha = borderA / 255;
+                pixels[bgIdx] = Math.round(pixels[bgIdx] * (1 - alpha) + 255 * alpha);
+                pixels[bgIdx + 1] = Math.round(pixels[bgIdx + 1] * (1 - alpha) + 255 * alpha);
+                pixels[bgIdx + 2] = Math.round(pixels[bgIdx + 2] * (1 - alpha) + 255 * alpha);
+              }
+            }
           }
         }
       }

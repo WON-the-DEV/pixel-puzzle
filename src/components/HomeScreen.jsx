@@ -3,29 +3,54 @@ import { getSizeForLevel, PRESET_PUZZLES, isLevelUnlocked, createPuzzleForLevel,
 import CollectionView from './CollectionView.jsx';
 import DailyChallenge from './DailyChallenge.jsx';
 import { LogoIcon, LightbulbIcon, LockIcon, CheckIcon, StarIcon, PuzzleIcon, SettingsIcon, GridIcon, VideoIcon, DiamondIcon, DifficultyBadge } from './icons/Icons.jsx';
+import { getRemainingAds, TossSDK } from '../lib/tossSDK.js';
 
 // Hint modal component
 function HintModal({ hints, onWatchAd, onBuyHints, onClose }) {
+  const remainingAds = getRemainingAds();
+  const adDisabled = remainingAds <= 0;
+
   return (
     <div className="modal-overlay" role="dialog" aria-modal="true" aria-label="힌트 충전" onClick={(e) => e.target === e.currentTarget && onClose()}>
-      <div className="modal-content">
-        <h2 style={{ marginBottom: 8 }}>💡 힌트 충전</h2>
-        <p style={{ fontSize: 14, color: 'var(--text-secondary)', marginBottom: 16 }}>
-          현재 힌트: <strong style={{ color: 'var(--accent)' }}>{hints}개</strong>
-        </p>
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 8, marginBottom: 16 }}>
-          <button className="hint-modal-btn" onClick={() => { onWatchAd(); onClose(); }}>
-            <span className="hint-modal-btn-icon"><VideoIcon size={20} color="var(--accent)" /></span>
-            <span className="hint-modal-btn-text">광고 보기</span>
-            <span className="hint-modal-btn-reward">+1</span>
+      <div className="modal-content hint-modal-redesign">
+        <div className="hint-modal-header">
+          <div className="hint-modal-icon-large">💡</div>
+          <h2 style={{ margin: 0 }}>힌트 충전</h2>
+          <p className="hint-modal-balance">
+            보유 <strong>{hints}</strong>개
+          </p>
+        </div>
+        <div className="hint-modal-cards">
+          <button
+            className={`hint-card ${adDisabled ? 'disabled' : ''}`}
+            disabled={adDisabled}
+            onClick={() => { if (!adDisabled) { onWatchAd(); onClose(); } }}
+          >
+            <div className="hint-card-icon">
+              <VideoIcon size={28} color={adDisabled ? 'var(--text-tertiary)' : 'var(--accent)'} />
+            </div>
+            <div className="hint-card-info">
+              <span className="hint-card-title">광고 보기</span>
+              <span className="hint-card-price">무료 (광고)</span>
+              <span className="hint-card-limit">오늘 {remainingAds}/{TossSDK.MAX_DAILY_ADS}회 남음</span>
+            </div>
+            <div className="hint-card-reward">+1</div>
           </button>
-          <button className="hint-modal-btn" onClick={() => { onBuyHints(); onClose(); }}>
-            <span className="hint-modal-btn-icon"><DiamondIcon size={20} color="var(--accent)" /></span>
-            <span className="hint-modal-btn-text">힌트 구매</span>
-            <span className="hint-modal-btn-reward">+5</span>
+          <button
+            className="hint-card"
+            onClick={() => { onBuyHints(); onClose(); }}
+          >
+            <div className="hint-card-icon">
+              <DiamondIcon size={28} color="#a855f7" />
+            </div>
+            <div className="hint-card-info">
+              <span className="hint-card-title">힌트 구매</span>
+              <span className="hint-card-price">₩1,000</span>
+            </div>
+            <div className="hint-card-reward">+5</div>
           </button>
         </div>
-        <button className="secondary-btn" onClick={onClose} style={{ width: '100%' }}>닫기</button>
+        <button className="secondary-btn" onClick={onClose} style={{ width: '100%', marginTop: 8 }}>닫기</button>
       </div>
     </div>
   );

@@ -11,6 +11,7 @@ import { loadAppState, saveAppState, loadCollectionProgress, saveCollectionProgr
 import { initAudio } from './lib/sound.js';
 import { calculateStars, TOTAL_LEVELS, getSizeForLevel } from './lib/puzzle.js';
 import { loadSettings } from './lib/settings.js';
+import { TossSDK, canWatchAd } from './lib/tossSDK.js';
 import { getDailyPuzzle, getTodayStr, loadDailyState, saveDailyState, calculateStreak, cleanupOldDailyData } from './lib/dailyChallenge.js';
 import { checkAchievements, getAchievementById, incrementDarkModeCount } from './lib/achievements.js';
 
@@ -44,6 +45,12 @@ export default function App() {
   const { state: gameState, startLevel, startDaily, toggleCell, fillCell, endDrag, toggleMode, useHint, clearAutoX, restartLevel, revive, applyZeroLineX } = useGame();
   // Track whether we already processed completion for current game instance
   const completionProcessedRef = useRef(false);
+
+  // Remove splash screen on mount
+  useEffect(() => {
+    const splash = document.getElementById('splash');
+    if (splash) splash.remove();
+  }, []);
 
   // Cleanup old daily challenge data on startup (90 days)
   useEffect(() => {
@@ -310,22 +317,32 @@ export default function App() {
     setScreen('home');
   }, []);
 
-  // 광고 시청 (placeholder)
-  const handleWatchAd = useCallback(() => {
-    setAppState((prev) => ({
-      ...prev,
-      hints: prev.hints + 1,
-    }));
-    alert('광고 시청 완료! 힌트 +1 💡');
+  // 광고 시청 (TossSDK 연동)
+  const handleWatchAd = useCallback(async () => {
+    if (!canWatchAd()) {
+      setToasts(prev => [...prev, { icon: '⏰', message: '오늘의 광고 시청 횟수를 모두 사용했어요' }]);
+      return;
+    }
+    const result = await TossSDK.showRewardedAd();
+    if (result.rewarded) {
+      setAppState((prev) => ({
+        ...prev,
+        hints: prev.hints + 1,
+      }));
+      setToasts(prev => [...prev, { icon: '💡', message: '광고 시청 완료! 힌트 +1' }]);
+    }
   }, []);
 
-  // 힌트 구매 (placeholder)
-  const handleBuyHints = useCallback(() => {
-    setAppState((prev) => ({
-      ...prev,
-      hints: prev.hints + 5,
-    }));
-    alert('힌트 5개 구매 완료! 💎');
+  // 힌트 구매 (TossSDK 연동)
+  const handleBuyHints = useCallback(async () => {
+    const result = await TossSDK.purchase('hints_5');
+    if (result.success) {
+      setAppState((prev) => ({
+        ...prev,
+        hints: prev.hints + 5,
+      }));
+      setToasts(prev => [...prev, { icon: '💎', message: '힌트 5개 구매 완료!' }]);
+    }
   }, []);
 
   // 컬렉션 타일 게임 시작
