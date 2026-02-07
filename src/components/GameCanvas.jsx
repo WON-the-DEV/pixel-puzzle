@@ -1,5 +1,8 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { isRowComplete, isColComplete } from '../lib/puzzle.js';
+import { getSetting } from '../lib/settings.js';
+
+const TOUCH_OFFSET_Y = -30; // pixels above finger
 
 function getColors() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -53,12 +56,14 @@ export default function GameCanvas({
     longPressTimer: null,
     isLongPress: false,
     dragDirection: null, // 'horizontal' | 'vertical' | null — locked after first drag move
+    isTouch: false, // whether current interaction is touch (for offset)
   });
   const highlightRef = useRef({ row: -1, col: -1 });
   const lastTouchRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
   const mistakeFlashRef = useRef(new Set());
+  const touchOffsetActiveRef = useRef(false); // true when touch offset crosshair is visible
 
   // Mistake flash animation
   useEffect(() => {
@@ -331,6 +336,37 @@ export default function GameCanvas({
       ctx.lineWidth = 3;
       ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
     }
+
+    // ── Touch offset crosshair indicator ──
+    if (!controllerMode && touchOffsetActiveRef.current && hRow >= 0 && hCol >= 0) {
+      const cx = offsetX + hCol * cellSize;
+      const cy = offsetY + hRow * cellSize;
+      const center = cellSize / 2;
+
+      // Crosshair lines extending beyond the cell
+      ctx.strokeStyle = COLORS.highlight;
+      ctx.lineWidth = 1.5;
+      ctx.globalAlpha = 0.6;
+
+      // Horizontal line
+      ctx.beginPath();
+      ctx.moveTo(cx - 4, cy + center);
+      ctx.lineTo(cx + cellSize + 4, cy + center);
+      ctx.stroke();
+
+      // Vertical line
+      ctx.beginPath();
+      ctx.moveTo(cx + center, cy - 4);
+      ctx.lineTo(cx + center, cy + cellSize + 4);
+      ctx.stroke();
+
+      // Cell outline
+      ctx.globalAlpha = 0.8;
+      ctx.lineWidth = 2;
+      ctx.strokeRect(cx + 1, cy + 1, cellSize - 2, cellSize - 2);
+
+      ctx.globalAlpha = 1.0;
+    }
   }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
   useEffect(() => {
@@ -377,11 +413,15 @@ export default function GameCanvas({
   const handlePointerDown = useCallback(
     (e) => {
       if (isComplete || controllerMode) return;
-      const touch = e.touches ? e.touches[0] : e;
-      if (e.touches && e.touches.length > 1) return;
+      const isTouch = !!e.touches;
+      const touch = isTouch ? e.touches[0] : e;
+      if (isTouch && e.touches.length > 1) return;
       if (e.type === 'touchstart') e.preventDefault();
 
-      const cell = getCellAt(touch.clientX, touch.clientY);
+      // Apply touch offset when setting enabled
+      const useOffset = isTouch && getSetting('touchOffset');
+      const clientY = useOffset ? touch.clientY + TOUCH_OFFSET_Y : touch.clientY;
+      const cell = getCellAt(touch.clientX, clientY);
 
       if (!cell) return;
 
@@ -395,7 +435,9 @@ export default function GameCanvas({
       interaction.dragValue = null;
       interaction.isLongPress = false;
       interaction.dragDirection = null;
+      interaction.isTouch = isTouch;
 
+      touchOffsetActiveRef.current = useOffset;
       highlightRef.current = { row: cell.row, col: cell.col };
       lastTouchRef.current = { row: cell.row, col: cell.col };
       render();
@@ -406,12 +448,15 @@ export default function GameCanvas({
   const handlePointerMove = useCallback(
     (e) => {
       if (controllerMode) return;
-      const touch = e.touches ? e.touches[0] : e;
-      if (e.touches && e.touches.length > 1) return;
+      const isTouch = !!e.touches;
+      const touch = isTouch ? e.touches[0] : e;
+      if (isTouch && e.touches.length > 1) return;
       if (e.type === 'touchmove') e.preventDefault();
 
       const interaction = interactionRef.current;
-      const cell = getCellAt(touch.clientX, touch.clientY);
+      const useOffset = isTouch && touchOffsetActiveRef.current;
+      const clientY = useOffset ? touch.clientY + TOUCH_OFFSET_Y : touch.clientY;
+      const cell = getCellAt(touch.clientX, clientY);
 
       if (cell) {
         // During drag, constrain highlight to locked direction
@@ -507,7 +552,9 @@ export default function GameCanvas({
       interaction.startCell = null;
       interaction.isLongPress = false;
       interaction.dragDirection = null;
+      interaction.isTouch = false;
 
+      touchOffsetActiveRef.current = false;
       highlightRef.current = { row: -1, col: -1 };
       render();
     },

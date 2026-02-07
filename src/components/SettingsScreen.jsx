@@ -1,6 +1,6 @@
 import { useState, useCallback, useEffect } from 'react';
 import { loadSettings, saveSettings } from '../lib/settings.js';
-import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashIcon, AlertIcon, CheckIcon } from './icons/Icons.jsx';
+import { BackIcon, SoundIcon, VibrationIcon, EyeIcon, MoonIcon, BookIcon, TrashIcon, AlertIcon, CheckIcon, TouchIcon } from './icons/Icons.jsx';
 
 const DEV_MODE = import.meta.env.DEV;
 
@@ -88,6 +88,21 @@ export default function SettingsScreen({ onGoHome, onResetTutorial, onUnlockAll 
                 </div>
               </div>
               <div className={`settings-toggle ${settings.haptic ? 'on' : ''}`}>
+                <div className="settings-toggle-knob" />
+              </div>
+            </div>
+
+            <div className="settings-item" onClick={() => toggle('touchOffset')}>
+              <div className="settings-item-left">
+                <span className="settings-item-icon">
+                  <TouchIcon size={20} color="var(--accent)" />
+                </span>
+                <div className="settings-item-text">
+                  <span className="settings-item-label">오프셋 커서</span>
+                  <span className="settings-item-desc">손가락 위쪽에 선택점 표시</span>
+                </div>
+              </div>
+              <div className={`settings-toggle ${settings.touchOffset ? 'on' : ''}`}>
                 <div className="settings-toggle-knob" />
               </div>
             </div>
