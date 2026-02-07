@@ -8,7 +8,7 @@ const DEFAULT_SETTINGS = {
   sound: true,
   haptic: true,
   darkMode: false,
-  touchOffset: true, // 오프셋 커서 (손가락 가림 방지)
+  touchOffset: false, // 오프셋 커서 (손가락 가림 방지)
   // showMistakes removed — always on as default behavior
 };
 

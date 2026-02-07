@@ -315,10 +315,11 @@ export default function GameCanvas({
           ctx.quadraticCurveTo(cx, cy, cx + r, cy);
           ctx.closePath();
           ctx.fill();
-        } else if (cell === 2) {
+        } else if (cell === 2 || cell === 3) {
           const isAutoX = animatingAutoX.has(key);
+          const isMistake = cell === 3;
           const isMistakeFlash = flashingMistakes.has(key);
-          ctx.strokeStyle = isMistakeFlash ? COLORS.mistakeBorder : isAutoX ? COLORS.autoXMark : COLORS.xMark;
+          ctx.strokeStyle = (isMistake || isMistakeFlash) ? COLORS.mistakeBorder : isAutoX ? COLORS.autoXMark : COLORS.xMark;
           ctx.lineWidth = isMistakeFlash ? 2.5 : 2;
           ctx.lineCap = 'round';
           const m = cellSize * 0.28;
@@ -348,35 +349,7 @@ export default function GameCanvas({
       ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
     }
 
-    // ── Touch offset crosshair indicator ──
-    if (!controllerMode && touchOffsetActiveRef.current && hRow >= 0 && hCol >= 0) {
-      const cx = offsetX + hCol * cellSize;
-      const cy = offsetY + hRow * cellSize;
-      const center = cellSize / 2;
-
-      // Crosshair lines extending beyond the cell
-      ctx.strokeStyle = COLORS.highlight;
-      ctx.lineWidth = 1.5;
-      ctx.globalAlpha = 0.6;
-
-      // Horizontal line
-      ctx.beginPath();
-      ctx.moveTo(cx - 4, cy + center);
-      ctx.lineTo(cx + cellSize + 4, cy + center);
-      ctx.stroke();
-
-      // Vertical line
-      ctx.beginPath();
-      ctx.moveTo(cx + center, cy - 4);
-      ctx.lineTo(cx + center, cy + cellSize + 4);
-      ctx.stroke();
-
-      // Cell outline
-      ctx.globalAlpha = 0.8;
-      ctx.lineWidth = 2;
-      ctx.strokeRect(cx + 1, cy + 1, cellSize - 2, cellSize - 2);
-
-      ctx.globalAlpha = 1.0;
+    // (crosshair indicator removed — was distracting)
     }
   }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
@@ -527,19 +500,7 @@ export default function GameCanvas({
       }
 
       if (interaction.isDragging && interaction.dragValue !== null && cell && !isComplete) {
-        // Lock drag to the detected direction
-        const startCell = interaction.startCell;
-        if (interaction.dragDirection && startCell) {
-          if (interaction.dragDirection === 'horizontal' && cell.row !== startCell.row) {
-            // Ignore — trying to move vertically in a horizontal drag
-          } else if (interaction.dragDirection === 'vertical' && cell.col !== startCell.col) {
-            // Ignore — trying to move horizontally in a vertical drag
-          } else {
-            onFillCell(cell.row, cell.col, interaction.dragValue);
-          }
-        } else {
-          onFillCell(cell.row, cell.col, interaction.dragValue);
-        }
+        onFillCell(cell.row, cell.col, interaction.dragValue);
       }
 
       scheduleRender();

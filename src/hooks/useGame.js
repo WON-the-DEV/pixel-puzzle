@@ -279,8 +279,8 @@ function gameReducer(state, action) {
             if (newLives === 0) {
               isGameOver = true;
             }
-            // 실수 플래시: 잠깐 빨간색으로 표시 후 X로 변환
-            newGrid[row][col] = 2;
+            // 틀린 셀: 3으로 저장 (영구 빨간 X 표시)
+            newGrid[row][col] = 3;
             mistakeFlashCells = [{ row, col }];
           }
         }
@@ -319,8 +319,8 @@ function gameReducer(state, action) {
       if (state.isComplete || state.isGameOver) return state;
       const { row, col, value } = action;
       if (state.playerGrid[row][col] === value) return state;
-      // 이미 X(2)인 셀은 무시 — 추가 라이프 감소 없음
-      if (state.playerGrid[row][col] === 2) return state;
+      // 이미 X(2) 또는 틀린 X(3)인 셀은 무시 — 추가 라이프 감소 없음
+      if (state.playerGrid[row][col] === 2 || state.playerGrid[row][col] === 3) return state;
       // 이미 채워진(1) 셀도 무시
       if (state.playerGrid[row][col] === 1) return state;
 
@@ -328,9 +328,9 @@ function gameReducer(state, action) {
       if (value === 1) {
         const expected = state.puzzle.solution[row][col];
         if (expected !== 1) {
-          // 틀림 — 라이프 감소 + X 표시
+          // 틀림 — 라이프 감소 + 빨간 X(3) 표시
           const newLives = Math.max(0, state.lives - 1);
-          newGrid[row][col] = 2;
+          newGrid[row][col] = 3;
           if (newLives === 0) {
             return { ...state, playerGrid: newGrid, lives: newLives, isGameOver: true, lostLife: true };
           }
