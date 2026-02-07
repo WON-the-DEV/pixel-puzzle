@@ -210,6 +210,8 @@ export default function GameScreen({
   }, [cursorRow, cursorCol, isComplete, isGameOver, puzzle, mode, onToggleMode, onToggleCell, playerGrid]);
 
   // Bug 4: handleControllerMove now accepts holdAction for continuous fill/mark
+  // Fixed: Use onFillCell directly to avoid mode toggle race condition
+  // This ensures auto-X triggers correctly during hold-move actions
   const handleControllerMove = useCallback((direction, holdAction) => {
     if (!puzzle) return;
     
@@ -232,22 +234,19 @@ export default function GameScreen({
       
       if (holdAction === 'fill') {
         if (current === 0) {
-          // Empty cell - fill it
+          // Empty cell - fill it using onFillCell directly (bypasses mode toggle issues)
           playFill();
-          if (mode !== 'fill') onToggleMode();
-          // Use setTimeout to ensure mode change is processed
-          setTimeout(() => onToggleCell(newRow, newCol), 0);
+          onFillCell(newRow, newCol, 1);
         }
       } else if (holdAction === 'mark') {
         if (current === 0) {
-          // Empty cell - mark it
+          // Empty cell - mark it using onFillCell directly
           playMark();
-          if (mode !== 'mark') onToggleMode();
-          setTimeout(() => onToggleCell(newRow, newCol), 0);
+          onFillCell(newRow, newCol, 2);
         }
       }
     }
-  }, [puzzle, cursorRow, cursorCol, isComplete, isGameOver, playerGrid, mode, onToggleMode, onToggleCell]);
+  }, [puzzle, cursorRow, cursorCol, isComplete, isGameOver, playerGrid, onFillCell]);
 
   if (!puzzle) return null;
 

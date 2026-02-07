@@ -204,7 +204,7 @@ function MiniPreview({ collection, completedTiles }) {
     }
   }, [bigPicture, palette, completedTiles, id, tileSize, tileRows, tileCols]);
 
-  return <canvas ref={canvasRef} style={{ borderRadius: 6 }} />;
+  return <canvas ref={canvasRef} style={{ borderRadius: 6, border: '1px solid var(--border-light)' }} />;
 }
 
 const DIFF_COLORS = {

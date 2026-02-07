@@ -52,6 +52,7 @@ export default function GameCanvas({
     startY: 0,
     longPressTimer: null,
     isLongPress: false,
+    dragDirection: null, // 'horizontal' | 'vertical' | null — locked after first drag move
   });
   const highlightRef = useRef({ row: -1, col: -1 });
   const lastTouchRef = useRef({ row: -1, col: -1 });
@@ -393,6 +394,7 @@ export default function GameCanvas({
       interaction.startY = touch.clientY;
       interaction.dragValue = null;
       interaction.isLongPress = false;
+      interaction.dragDirection = null;
 
       highlightRef.current = { row: cell.row, col: cell.col };
       lastTouchRef.current = { row: cell.row, col: cell.col };
@@ -412,7 +414,17 @@ export default function GameCanvas({
       const cell = getCellAt(touch.clientX, touch.clientY);
 
       if (cell) {
-        highlightRef.current = { row: cell.row, col: cell.col };
+        // During drag, constrain highlight to locked direction
+        const interaction = interactionRef.current;
+        if (interaction.isDragging && interaction.dragDirection && interaction.startCell) {
+          if (interaction.dragDirection === 'horizontal') {
+            highlightRef.current = { row: interaction.startCell.row, col: cell.col };
+          } else {
+            highlightRef.current = { row: cell.row, col: interaction.startCell.col };
+          }
+        } else {
+          highlightRef.current = { row: cell.row, col: cell.col };
+        }
       } else {
         highlightRef.current = { row: -1, col: -1 };
       }
@@ -425,6 +437,19 @@ export default function GameCanvas({
         if (dist >= DRAG_THRESHOLD) {
           interaction.isDragging = true;
           clearLongPressTimer();
+
+          // Detect drag direction from start cell to current cell
+          if (cell && interaction.startCell) {
+            const dRow = Math.abs(cell.row - interaction.startCell.row);
+            const dCol = Math.abs(cell.col - interaction.startCell.col);
+            if (dRow > dCol) interaction.dragDirection = 'vertical';
+            else if (dCol > dRow) interaction.dragDirection = 'horizontal';
+            else {
+              // Equal or same cell — detect from pixel movement
+              interaction.dragDirection = Math.abs(dx) >= Math.abs(dy) ? 'horizontal' : 'vertical';
+            }
+          }
+
           const startCell = interaction.startCell;
           if (startCell && !isComplete) {
             const current = playerGrid[startCell.row][startCell.col];
@@ -436,7 +461,19 @@ export default function GameCanvas({
       }
 
       if (interaction.isDragging && interaction.dragValue !== null && cell && !isComplete) {
-        onFillCell(cell.row, cell.col, interaction.dragValue);
+        // Lock drag to the detected direction
+        const startCell = interaction.startCell;
+        if (interaction.dragDirection && startCell) {
+          if (interaction.dragDirection === 'horizontal' && cell.row !== startCell.row) {
+            // Ignore — trying to move vertically in a horizontal drag
+          } else if (interaction.dragDirection === 'vertical' && cell.col !== startCell.col) {
+            // Ignore — trying to move horizontally in a vertical drag
+          } else {
+            onFillCell(cell.row, cell.col, interaction.dragValue);
+          }
+        } else {
+          onFillCell(cell.row, cell.col, interaction.dragValue);
+        }
       }
 
       render();
@@ -469,6 +506,7 @@ export default function GameCanvas({
       interaction.dragValue = null;
       interaction.startCell = null;
       interaction.isLongPress = false;
+      interaction.dragDirection = null;
 
       highlightRef.current = { row: -1, col: -1 };
       render();
