@@ -92,7 +92,7 @@ const INITIAL_STATE = {
   startTime: null, elapsedTime: 0,
   isComplete: false, lives: 3, maxLives: 3,
   isGameOver: false, autoXCells: [], filledCorrect: 0, lostLife: false,
-  mistakeFlashCells: [],
+  
   usedRevive: false,
 };
 
@@ -146,7 +146,6 @@ function gameReducer(state, action) {
       let newLives = state.lives;
       let isGameOver = false;
       let lostLife = false;
-      let mistakeFlashCells = [];
 
       if (state.mode === 'fill') {
         if (current === 2) return state;
@@ -161,7 +160,6 @@ function gameReducer(state, action) {
             lostLife = true;
             if (newLives === 0) isGameOver = true;
             newGrid[row][col] = 2;
-            mistakeFlashCells = [{ row, col }];
           }
         }
       } else {
@@ -179,7 +177,7 @@ function gameReducer(state, action) {
         ...state, playerGrid: autoGrid, history: newHistory, historyIndex: newHistory.length - 1,
         isComplete, elapsedTime: isComplete ? Date.now() - state.startTime : state.elapsedTime,
         lives: newLives, isGameOver, lostLife, autoXCells: autoFilledCells, filledCorrect,
-        mistakeFlashCells,
+       
       };
     }
     case 'FILL_CELL': {
@@ -235,13 +233,13 @@ function gameReducer(state, action) {
       if (state.historyIndex <= 0 || state.isGameOver) return state;
       const idx = state.historyIndex - 1;
       const grid = cloneGrid(state.history[idx]);
-      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid), mistakeFlashCells: [] };
+      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid) };
     }
     case 'REDO': {
       if (state.historyIndex >= state.history.length - 1 || state.isGameOver) return state;
       const idx = state.historyIndex + 1;
       const grid = cloneGrid(state.history[idx]);
-      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid), mistakeFlashCells: [] };
+      return { ...state, playerGrid: grid, historyIndex: idx, autoXCells: [], filledCorrect: getFilledCorrectCount(state.puzzle.solution, grid) };
     }
     case 'USE_HINT': {
       if (state.isComplete || state.isGameOver) return state;
@@ -258,7 +256,7 @@ function gameReducer(state, action) {
       return {
         ...state, playerGrid: autoGrid, history: newHistory, historyIndex: newHistory.length - 1,
         isComplete, elapsedTime: isComplete ? Date.now() - state.startTime : state.elapsedTime,
-        autoXCells: autoFilledCells, filledCorrect, mistakeFlashCells: [],
+        autoXCells: autoFilledCells, filledCorrect,
       };
     }
     case 'REVIVE': {
@@ -289,7 +287,7 @@ function gameReducer(state, action) {
 }
 
 // ── Canvas (단색, MonoCanvas — simplified, no zoom) ──
-function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode = false }) {
+function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndDrag, isComplete, autoXCells, controllerMode, cursorRow, cursorCol, darkMode = false }) {
   const canvasRef = useRef(null);
   const wrapperRef = useRef(null);
   const interactionRef = useRef({ isDown: false, isDragging: false, dragValue: null, startCell: null, startX: 0, startY: 0 });
@@ -297,7 +295,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
   const lastTouchRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
   const autoXAnimRef = useRef(new Set());
-  const mistakeFlashAnimRef = useRef(new Set());
   const rafRef = useRef(null);
 
   const DRAG_THRESHOLD = 8;
@@ -309,21 +306,6 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       return () => clearTimeout(timer);
     }
   }, [autoXCells]);
-
-  useEffect(() => {
-    if (mistakeFlashCells && mistakeFlashCells.length > 0) {
-      mistakeFlashAnimRef.current = new Set(mistakeFlashCells.map(c => `${c.row}-${c.col}`));
-      const timer = setTimeout(() => {
-        mistakeFlashAnimRef.current = new Set();
-        if (rafRef.current) cancelAnimationFrame(rafRef.current);
-        rafRef.current = requestAnimationFrame(() => {
-          rafRef.current = null;
-          render();
-        });
-      }, 500);
-      return () => clearTimeout(timer);
-    }
-  }, [mistakeFlashCells]);
 
   const getLayout = useCallback(() => {
     if (!puzzle) return null;
@@ -378,9 +360,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       highlightBg: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(108,92,231,0.08)',
       touchHighlightBg: isDark ? 'rgba(255,255,255,0.05)' : 'rgba(108,92,231,0.05)',
       completedRowBg: isDark ? 'rgba(16,185,129,0.12)' : 'rgba(16,185,129,0.10)',
-      autoXMark: '#6C5CE7',
-      mistakeBg: 'rgba(239,68,68,0.25)',
-      mistakeBorder: isDark ? '#ff6b6b' : '#ef4444',
+      mistakeX: isDark ? '#ff6b6b' : '#ef4444',
       xMark: isDark ? '#888888' : '#C0C4CC',
       cursorBorder: '#FF6B6B',
       cursorBg: isDark ? 'rgba(255,255,255,0.08)' : 'rgba(255,107,107,0.12)',
@@ -482,23 +462,11 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       ctx.beginPath(); ctx.moveTo(offsetX + i * cellSize, offsetY); ctx.lineTo(offsetX + i * cellSize, offsetY + size * cellSize); ctx.stroke();
     }
 
-    const animAutoX = autoXAnimRef.current;
-    const flashingMistakes = mistakeFlashAnimRef.current;
-
     for (let i = 0; i < size; i++) {
       for (let j = 0; j < size; j++) {
         const cell = playerGrid[i][j];
         const x = offsetX + j * cellSize;
         const y = offsetY + i * cellSize;
-        const key = `${i}-${j}`;
-
-        if (flashingMistakes.has(key)) {
-          ctx.fillStyle = C.mistakeBg;
-          ctx.fillRect(x + 1, y + 1, cellSize - 2, cellSize - 2);
-          ctx.strokeStyle = C.mistakeBorder;
-          ctx.lineWidth = 2;
-          ctx.strokeRect(x + 2, y + 2, cellSize - 4, cellSize - 4);
-        }
 
         if (cell === 1) {
           ctx.fillStyle = C.cellFilled;
@@ -516,11 +484,10 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
           ctx.quadraticCurveTo(x + inset, y + inset, x + inset + r, y + inset);
           ctx.closePath();
           ctx.fill();
-        } else if (cell === 2) {
-          const isAuto = animAutoX.has(key);
-          const isMistake = flashingMistakes.has(key);
-          ctx.strokeStyle = isMistake ? C.mistakeBorder : isAuto ? C.autoXMark : C.xMark;
-          ctx.lineWidth = isMistake ? 2.5 : 2;
+        } else if (cell === 2 || cell === 3) {
+          const isMistake = cell === 3;
+          ctx.strokeStyle = isMistake ? (C.mistakeX || '#ef4444') : C.xMark;
+          ctx.lineWidth = 2;
           ctx.lineCap = 'round';
           const m = cellSize * 0.28;
           ctx.beginPath();
@@ -542,7 +509,7 @@ function MonoCanvas({ puzzle, playerGrid, mode, onToggleCell, onFillCell, onEndD
       ctx.lineWidth = 3;
       ctx.strokeRect(cx + 1.5, cy + 1.5, cellSize - 3, cellSize - 3);
     }
-  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, mistakeFlashCells, controllerMode, cursorRow, cursorCol, darkMode]);
+  }, [puzzle, playerGrid, getLayout, isComplete, autoXCells, controllerMode, cursorRow, cursorCol, darkMode]);
 
   const scheduleRender = useCallback(() => {
     if (rafRef.current) return;
@@ -886,7 +853,6 @@ export default function CollectionGameScreen({ collectionId, tileRow, tileCol, o
           onEndDrag={handleEndDrag}
           isComplete={state.isComplete}
           autoXCells={state.autoXCells}
-          mistakeFlashCells={state.mistakeFlashCells}
           controllerMode={controllerMode}
           cursorRow={cursorRow}
           cursorCol={cursorCol}

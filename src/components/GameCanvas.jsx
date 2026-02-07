@@ -1,8 +1,6 @@
 import { useRef, useEffect, useCallback, useState } from 'react';
 import { isRowComplete, isColComplete } from '../lib/puzzle.js';
-// getSetting import removed (touchOffset feature removed)
 
-// Touch offset removed — direct touch position used
 
 function getColors() {
   const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
@@ -17,9 +15,7 @@ function getColors() {
     highlightBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(108, 92, 231, 0.08)',
     touchHighlightBg: isDark ? 'rgba(255, 255, 255, 0.05)' : 'rgba(108, 92, 231, 0.05)',
     completedRowBg: isDark ? 'rgba(16, 185, 129, 0.12)' : 'rgba(16, 185, 129, 0.10)',
-    mistakeBg: 'rgba(239, 68, 68, 0.25)',
-    mistakeBorder: isDark ? '#ff6b6b' : '#ef4444',
-    autoXMark: '#6C5CE7',
+    mistakeX: isDark ? '#ff6b6b' : '#ef4444',
     xMark: isDark ? '#888888' : '#C0C4CC',
     cursorBorder: '#FF6B6B',
     cursorBg: isDark ? 'rgba(255, 255, 255, 0.08)' : 'rgba(255, 107, 107, 0.12)',
@@ -37,7 +33,6 @@ export default function GameCanvas({
   onEndDrag,
   isComplete,
   autoXCells = [],
-  mistakeFlashCells = [],
   controllerMode = false,
   cursorRow = 0,
   cursorCol = 0,
@@ -61,15 +56,10 @@ export default function GameCanvas({
   const highlightRef = useRef({ row: -1, col: -1 });
   const lastTouchRef = useRef({ row: -1, col: -1 });
   const layoutRef = useRef(null);
-  // autoXAnimRef removed — auto-X uses same style as regular X
-  // mistakeFlashRef removed — wrong cells use permanent red X (cell value 3)
-  // touchOffsetActiveRef removed
   const rafRef = useRef(null); // requestAnimationFrame id for batched rendering
   const renderRef = useRef(null); // always points to latest render function
 
-  // Mistake flash removed — wrong cells are permanently red X (cell value 3)
 
-  // autoX animation effect removed — no visual distinction needed
 
   const getLayout = useCallback(() => {
     if (!puzzle) return null;
@@ -284,7 +274,7 @@ export default function GameCanvas({
           ctx.fill();
         } else if (cell === 2 || cell === 3) {
           const isMistake = cell === 3;
-          ctx.strokeStyle = isMistake ? COLORS.mistakeBorder : COLORS.xMark;
+          ctx.strokeStyle = isMistake ? COLORS.mistakeX : COLORS.xMark;
           ctx.lineWidth = 2;
           ctx.lineCap = 'round';
           const m = cellSize * 0.28;

@@ -32,7 +32,7 @@ export default function GameScreen({
   isDaily = false,
   dailyDate = null,
 }) {
-  const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife, mistakeFlashCells, usedRevive } = gameState;
+  const { puzzle, playerGrid, mode, level, startTime, isComplete, elapsedTime, lives, maxLives, isGameOver, autoXCells, filledCorrect, lostLife, usedRevive } = gameState;
   const [displayTime, setDisplayTime] = useState('00:00');
   const timerRef = useRef(null);
   const prevCompleteRowsRef = useRef(new Set());
@@ -334,7 +334,6 @@ export default function GameScreen({
           onEndDrag={onEndDrag}
           isComplete={isComplete}
           autoXCells={autoXCells}
-          mistakeFlashCells={mistakeFlashCells}
           controllerMode={controllerMode}
           cursorRow={cursorRow}
           cursorCol={cursorCol}

@@ -28,7 +28,7 @@ const INITIAL_STATE = {
   // 진행률
   filledCorrect: 0,
   // 실수 플래시 셀 (빨간색으로 잠깐 표시 후 X로 변환)
-  mistakeFlashCells: [],
+  
   // 광고 부활 사용 여부
   usedRevive: false,
 };
@@ -83,7 +83,7 @@ function gameReducer(state, action) {
           isGameOver: savedDaily.lives != null && savedDaily.lives <= 0,
           autoXCells: [],
           filledCorrect,
-          mistakeFlashCells: [],
+          
           usedRevive: savedDaily.usedRevive || false,
           pendingZeroLineX: false,
         };
@@ -123,7 +123,7 @@ function gameReducer(state, action) {
           isGameOver: false,
           autoXCells: [],
           filledCorrect: 0,
-          mistakeFlashCells: [],
+          
           usedRevive: false,
           pendingZeroLineX: true,
           zeroLineCells: zeroLineCellsDaily,
@@ -146,7 +146,7 @@ function gameReducer(state, action) {
         isGameOver: false,
         autoXCells: [],
         filledCorrect: 0,
-        mistakeFlashCells: [],
+        
         usedRevive: false,
         pendingZeroLineX: false,
       };
@@ -176,7 +176,7 @@ function gameReducer(state, action) {
           isGameOver: saved.lives != null && saved.lives <= 0,
           autoXCells: [],
           filledCorrect,
-          mistakeFlashCells: [],
+          
           usedRevive: saved.usedRevive || false,
           pendingZeroLineX: false,
         };
@@ -219,7 +219,7 @@ function gameReducer(state, action) {
           isGameOver: false,
           autoXCells: [],
           filledCorrect: 0,
-          mistakeFlashCells: [],
+          
           usedRevive: false,
           pendingZeroLineX: true,
           zeroLineCells,
@@ -242,7 +242,7 @@ function gameReducer(state, action) {
         isGameOver: false,
         autoXCells: [],
         filledCorrect: 0,
-        mistakeFlashCells: [],
+        
         usedRevive: false,
         pendingZeroLineX: false,
       };
@@ -257,7 +257,7 @@ function gameReducer(state, action) {
       let newLives = state.lives;
       let isGameOver = false;
       let lostLife = false;
-      let mistakeFlashCells = [];
+
 
       if (state.mode === 'fill') {
         // X 표시된 셀은 fill 모드에서 무시 (목숨 보호)
@@ -281,7 +281,7 @@ function gameReducer(state, action) {
             }
             // 틀린 셀: 3으로 저장 (영구 빨간 X 표시)
             newGrid[row][col] = 3;
-            mistakeFlashCells = [{ row, col }];
+
           }
         }
       } else {
@@ -311,7 +311,7 @@ function gameReducer(state, action) {
         lostLife,
         autoXCells: autoFilledCells,
         filledCorrect,
-        mistakeFlashCells,
+        
       };
     }
 
@@ -393,7 +393,7 @@ function gameReducer(state, action) {
         historyIndex: newIndex,
         autoXCells: [],
         filledCorrect,
-        mistakeFlashCells: [],
+        
       };
     }
 
@@ -408,7 +408,7 @@ function gameReducer(state, action) {
         historyIndex: newIndex,
         autoXCells: [],
         filledCorrect,
-        mistakeFlashCells: [],
+        
       };
     }
 
@@ -440,12 +440,12 @@ function gameReducer(state, action) {
         elapsedTime: isComplete ? Date.now() - state.startTime : state.elapsedTime,
         autoXCells: autoFilledCells,
         filledCorrect,
-        mistakeFlashCells: [],
+        
       };
     }
 
     case 'CLEAR_AUTO_X':
-      return { ...state, autoXCells: [], lostLife: false, mistakeFlashCells: [] };
+      return { ...state, autoXCells: [], lostLife: false };
 
     case 'REVIVE': {
       if (!state.isGameOver || state.usedRevive) return state;
@@ -508,7 +508,7 @@ function gameReducer(state, action) {
           isGameOver: false,
           autoXCells: [],
           filledCorrect: 0,
-          mistakeFlashCells: [],
+          
           usedRevive: false,
           pendingZeroLineX: true,
           zeroLineCells: zeroLineCellsRestart,
@@ -529,7 +529,7 @@ function gameReducer(state, action) {
         isGameOver: false,
         autoXCells: [],
         filledCorrect: 0,
-        mistakeFlashCells: [],
+        
         usedRevive: false,
         pendingZeroLineX: false,
       };

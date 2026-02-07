@@ -8,7 +8,6 @@ const DEFAULT_SETTINGS = {
   sound: true,
   haptic: true,
   darkMode: false,
-  // touchOffset removed
   // showMistakes removed — always on as default behavior
 };
 
