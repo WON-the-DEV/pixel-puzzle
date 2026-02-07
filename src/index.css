@@ -1942,12 +1942,27 @@ body {
   justify-content: center;
 }
 
+.ctrl-preview-actions.gameboy-style {
+  flex-direction: row;
+  gap: 10px;
+  align-items: center;
+}
+
+.ctrl-preview-actions.gameboy-style .ctrl-action.fill {
+  margin-top: 18px;
+}
+
 .ctrl-action {
-  padding: 8px 14px;
-  border-radius: 8px;
-  font-size: 12px;
+  padding: 10px 0;
+  width: 52px;
+  height: 52px;
+  border-radius: 50%;
+  font-size: 11px;
   font-weight: 700;
   text-align: center;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ctrl-action.fill {
@@ -2637,14 +2652,14 @@ body {
 
 .dpad-grid {
   display: grid;
-  grid-template-columns: repeat(3, min(44px, calc((50vw - 40px) / 3)));
-  grid-template-rows: repeat(3, min(44px, calc((50vw - 40px) / 3)));
-  gap: 2px;
+  grid-template-columns: repeat(3, 48px);
+  grid-template-rows: repeat(3, 48px);
+  gap: 4px;
 }
 
 .dpad-btn {
-  width: min(44px, calc((50vw - 40px) / 3));
-  height: min(44px, calc((50vw - 40px) / 3));
+  width: 48px;
+  height: 48px;
   border: none;
   border-radius: var(--radius-sm);
   background: var(--bg);
@@ -2682,20 +2697,20 @@ body {
 .controller-right {
   display: flex;
   flex-direction: row;
-  gap: 10px;
+  gap: 14px;
   align-items: center;
   flex: 0 1 auto;
-  padding-right: 4px;
+  padding-right: 8px;
 }
 
 /* Game Boy style: Fill(B) left-lower, X(A) right-upper */
 .action-fill {
-  margin-top: 16px;
+  margin-top: 24px;
 }
 
 .action-btn {
-  width: 56px;
-  height: 56px;
+  width: 64px;
+  height: 64px;
   border-radius: 50%;
   border: 2px solid var(--border);
   background: var(--bg);
@@ -2712,7 +2727,7 @@ body {
 }
 
 .action-btn-label {
-  font-size: 10px;
+  font-size: 11px;
   font-weight: 700;
   letter-spacing: -0.3px;
 }

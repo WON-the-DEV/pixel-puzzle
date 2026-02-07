@@ -86,7 +86,7 @@ function ControllerExample() {
           <span /><span className="ctrl-key">▼</span><span />
         </div>
       </div>
-      <div className="ctrl-preview-actions">
+      <div className="ctrl-preview-actions gameboy-style">
         <span className="ctrl-action fill">채우기</span>
         <span className="ctrl-action mark">X표시</span>
       </div>
