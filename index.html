@@ -17,13 +17,23 @@
     <link rel="icon" type="image/png" sizes="192x192" href="/pixel-puzzle/icon-192.png" />
     <link rel="apple-touch-icon" href="/pixel-puzzle/icon-192.png" />
     <title>노노그램 - 픽셀 퍼즐</title>
-    <script type="module" crossorigin src="/pixel-puzzle/assets/index-C_tqeXlt.js"></script>
+    <script type="module" crossorigin src="/pixel-puzzle/assets/index-C70AWadW.js"></script>
     <link rel="modulepreload" crossorigin href="/pixel-puzzle/assets/puzzle-data-yGYU2kR4.js">
     <link rel="modulepreload" crossorigin href="/pixel-puzzle/assets/collections-C3YRBltM.js">
-    <link rel="stylesheet" crossorigin href="/pixel-puzzle/assets/index-xddFSuKW.css">
+    <link rel="stylesheet" crossorigin href="/pixel-puzzle/assets/index-CVR8hR1h.css">
   </head>
   <body>
-    <div id="root"></div>
+    <div id="root">
+      <div id="splash" style="position:fixed;inset:0;z-index:9999;display:flex;flex-direction:column;align-items:center;justify-content:center;background:linear-gradient(135deg,#6c5ce7 0%,#a855f7 100%);animation:splashFade 0.4s ease-out 0.8s forwards;opacity:1;">
+        <div style="font-size:36px;font-weight:800;color:white;letter-spacing:-0.5px;">🧩 노노그램</div>
+        <div style="font-size:14px;color:rgba(255,255,255,0.7);margin-top:6px;letter-spacing:2px;">PIXEL PUZZLE</div>
+      </div>
+    </div>
+    <style>
+      @keyframes splashFade {
+        to { opacity: 0; pointer-events: none; }
+      }
+    </style>
     <script>
       if ('serviceWorker' in navigator) {
         window.addEventListener('load', () => {
