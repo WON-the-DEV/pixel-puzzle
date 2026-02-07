@@ -41,7 +41,14 @@ export default function GameScreen({
   const wasGameOverRef = useRef(false);
 
   // Controller mode
-  const [controllerMode, setControllerMode] = useState(false);
+  const [controllerMode, setControllerMode] = useState(() => {
+    try { return JSON.parse(localStorage.getItem('nonogram_controller_mode')) || false; } catch { return false; }
+  });
+  // Persist controller mode preference
+  const setControllerModeAndSave = (val) => {
+    setControllerMode(val);
+    try { localStorage.setItem('nonogram_controller_mode', JSON.stringify(val)); } catch {}
+  };
   const [cursorRow, setCursorRow] = useState(0);
   const [cursorCol, setCursorCol] = useState(0);
 
@@ -344,7 +351,7 @@ export default function GameScreen({
           </button>
           <button
             className="control-btn-sm"
-            onClick={() => setControllerMode(false)}
+            onClick={() => setControllerModeAndSave(false)}
             aria-label="터치 모드로 전환"
           >
             <TouchIcon size={16} color="var(--text)" />
@@ -394,7 +401,7 @@ export default function GameScreen({
           </button>
           <button
             className="control-btn mode-switch-btn"
-            onClick={() => setControllerMode(true)}
+            onClick={() => setControllerModeAndSave(true)}
             aria-label="컨트롤러 모드로 전환"
           >
             <span className="icon">
